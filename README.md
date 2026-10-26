@@ -19,8 +19,11 @@ Cài package và chạy lệnh **bên trong thư mục tương ứng**, không c
 ```sh
 cd mobile
 npm install   # lần đầu
-npm start
+npx expo start   # rồi bấm i (iOS Simulator) hoặc quét QR bằng Expo Go
 ```
+
+Hiện app vẫn chạy được trên Expo Go. Khi tới phần cần code native (Google Sign-In, Stripe, push) thì dùng
+development build: `npm run ios` / `npm run android` (`expo run:*`).
 
 ## Chạy backend
 

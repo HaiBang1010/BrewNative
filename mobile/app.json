@@ -4,6 +4,7 @@
     "slug": "ReactNative",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "brew",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
@@ -20,7 +21,8 @@
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
     },
     "plugins": [
       "expo-status-bar",
@@ -29,7 +31,13 @@
         {
           "iosUrlScheme": "com.googleusercontent.apps.865915099764-6eb7d4p8e7599kda20f8fr3n6d9s213e"
         }
-      ]
-    ]
+      ],
+      "expo-router",
+      "@react-native-vector-icons/ionicons",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }
