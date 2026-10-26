@@ -60,6 +60,7 @@ Tài khoản mẫu do `npm run seed` tạo:
 |---|---|
 | `npm run start:dev` | Chạy API ở chế độ dev |
 | `npm run db:up` / `db:down` / `db:logs` | Bật / tắt / xem log Postgres (tắt vẫn giữ dữ liệu) |
+| `npm run stripe:listen` | Chạy Stripe CLI trong Docker, chuyển webhook về backend và in ra `whsec_...` (cần `STRIPE_SECRET_KEY` trong `.env`) |
 | `npm run migration:run` | Chạy các migration chưa chạy |
 | `npm run migration:generate -- src/database/migrations/<TenMigration>` | Sinh migration từ thay đổi entity |
 | `npm run migration:revert` | Hoàn tác migration gần nhất |

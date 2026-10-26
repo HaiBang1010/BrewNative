@@ -31,5 +31,20 @@ export const envValidationSchema = Joi.object({
 
   EXPO_ACCESS_TOKEN: Joi.string().allow('').default(''),
 
+  // Empty until payments are wired up; the prefixes catch keys pasted into the wrong slot.
+  STRIPE_SECRET_KEY: Joi.string()
+    .pattern(/^sk_(test|live)_/)
+    .allow('')
+    .default(''),
+  STRIPE_WEBHOOK_SECRET: Joi.string()
+    .pattern(/^whsec_/)
+    .allow('')
+    .default(''),
+  // Optional: returned to the app with each PaymentIntent so it doesn't need its own copy.
+  STRIPE_PUBLISHABLE_KEY: Joi.string()
+    .pattern(/^pk_(test|live)_/)
+    .allow('')
+    .default(''),
+
   ORDER_PAYMENT_TIMEOUT_MINUTES: Joi.number().integer().min(1).default(15),
 });

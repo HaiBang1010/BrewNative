@@ -22,6 +22,7 @@
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "db:up": "docker compose up -d --wait",
     "db:down": "docker compose down",
+    "stripe:listen": "docker compose --profile stripe run --rm stripe-cli",
     "db:logs": "docker compose logs -f postgres",
     "typeorm": "typeorm -d dist/database/data-source.js",
     "migration:generate": "npm run build && typeorm -d dist/database/data-source.js migration:generate",
@@ -52,6 +53,7 @@
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.4",
+    "stripe": "^23.0.1",
     "typeorm": "^1.1.2"
   },
   "devDependencies": {
