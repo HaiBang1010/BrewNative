@@ -1,0 +1,25 @@
+name: brew
+
+services:
+  postgres:
+    image: postgres:18
+    container_name: brew-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-brew}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-brew}
+      POSTGRES_DB: ${DB_NAME:-brew}
+    ports:
+      # Host 5432-5435 are taken by other projects on this machine.
+      - '127.0.0.1:${DB_PORT:-5440}:5432'
+    volumes:
+      # Postgres 18+ keeps its data under a versioned subfolder of /var/lib/postgresql.
+      - brew-postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  brew-postgres-data:

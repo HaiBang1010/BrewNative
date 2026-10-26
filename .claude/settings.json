@@ -1,4 +1,16 @@
 {
+  "permissions": {
+    "allow": [
+      "Bash(code --version)",
+      "Bash(code --profile \"React Native\" --new-window)",
+      "Bash(python3 -c ' *)",
+      "Bash(break)",
+      "Bash(npx tsc *)",
+      "Bash(awk -F= '/^STRIPE/{print $1\": \"\\(length\\($2\\)? substr\\($2,1,8\\)\"…\\(\"length\\($2\\)\" chars\\)\":\"trống\"\\)}' .env)",
+      "Bash(docker image *)",
+      "Bash(node --input-type=module -e ' *)"
+    ]
+  },
   "enabledPlugins": {
     "expo@claude-plugins-official": true
   }
