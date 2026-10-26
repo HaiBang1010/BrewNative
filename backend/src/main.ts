@@ -7,7 +7,10 @@ import { AppModule } from './app.module.js';
 import { UPLOADS_DIR } from './uploads/image-upload.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  // rawBody: the Stripe webhook signature is computed over the exact bytes received.
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true,
+  });
 
   app.setGlobalPrefix('api');
   app.enableCors();

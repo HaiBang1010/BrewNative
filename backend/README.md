@@ -7,10 +7,8 @@ API cho app Brew: NestJS 12 + TypeORM + PostgreSQL 18 (Docker).
 
 **Đã có:** auth (email/mật khẩu, Google, refresh token xoay vòng), phân quyền customer/staff/admin, hồ sơ và ảnh đại diện,
 push token, cửa hàng, menu (danh mục, món, tùy chọn), đặt đơn (server tự tính giá), quy trình trạng thái đơn,
-tự hủy đơn chưa thanh toán, chat khách và quán (REST + WebSocket), cập nhật đơn realtime (WebSocket),
-push notification, Swagger, seed dữ liệu mẫu.
-
-**Chưa có:** Stripe. Tìm `TODO(stripe)` trong code để biết chỗ sẽ nối vào.
+tự hủy đơn chưa thanh toán, thanh toán Stripe (PaymentIntent, webhook, hoàn tiền), chat khách và quán
+(REST + WebSocket), cập nhật đơn realtime (WebSocket), push notification, Swagger, seed dữ liệu mẫu.
 
 ## Cổng
 
@@ -54,6 +52,23 @@ Tài khoản mẫu do `npm run seed` tạo:
 - App gọi `http://192.168.0.13:3100/api`
 - Đặt `PUBLIC_URL=http://192.168.0.13:3100` trong `.env` để link ảnh upload mở được trên điện thoại.
 
+## Thanh toán Stripe (khi phát triển)
+
+1. Dashboard Stripe (chế độ **Test**) → Developers → API keys: chép `sk_test_...` vào `STRIPE_SECRET_KEY`,
+   `pk_test_...` vào `STRIPE_PUBLISHABLE_KEY` (không bắt buộc; backend gửi kèm cho app).
+2. Mở một terminal riêng: `npm run stripe:listen`. Lần đầu, chép `whsec_...` nó in ra vào `STRIPE_WEBHOOK_SECRET`
+   rồi khởi động lại backend. Để terminal này chạy suốt lúc thử thanh toán: nó chuyển webhook từ Stripe về máy.
+3. App: tạo đơn → `POST /api/orders/:id/payment` → mở PaymentSheet với `clientSecret`.
+   Thẻ test: `4242 4242 4242 4242` (thành công), `4000 0000 0000 0002` (bị từ chối), ngày hết hạn bất kỳ trong tương lai.
+4. Thấy dòng `--> payment_intent.succeeded` và `<-- [200]` trong terminal `stripe:listen` là đơn đã sang `paid`.
+
+**Khi deploy:** Dashboard → Developers → Webhooks → thêm endpoint `https://<domain>/api/webhooks/stripe`,
+chọn các event `payment_intent.succeeded`, `payment_intent.payment_failed`, `payment_intent.processing`,
+`payment_intent.requires_action`, `payment_intent.canceled`, `charge.refunded`, rồi dùng signing secret của endpoint đó
+cho `STRIPE_WEBHOOK_SECRET`.
+
+Tài khoản Stripe test hiện tại ở Singapore và nhận VND; số tiền tối thiểu mỗi lần thanh toán khoảng $0.50 (~12.000₫).
+
 ## Lệnh
 
 | Lệnh | Việc |
@@ -67,7 +82,7 @@ Tài khoản mẫu do `npm run seed` tạo:
 | `npm run migration:show` | Xem migration nào đã chạy |
 | `npm run seed` | Thêm dữ liệu mẫu (chạy lại không bị trùng) |
 | `npm test` | Unit test (Vitest) |
-| `npm run test:e2e` | Test e2e, gồm cả WebSocket (cần Postgres đang chạy) |
+| `npm run test:e2e` | Test e2e, gồm WebSocket và Stripe (cần Postgres; phần Stripe cần key test và mạng, tự bỏ qua nếu thiếu key). Tắt `stripe:listen` và server dev trước khi chạy |
 | `npm run lint` | Lint (oxlint) |
 
 Xóa sạch database để làm lại từ đầu: `docker compose down -v`, rồi `db:up`, `migration:run`, `seed`.
@@ -97,6 +112,9 @@ Xem [.env.example](.env.example). Thiếu hoặc sai kiểu thì server không k
 | `EXPO_ACCESS_TOKEN` | Chỉ cần nếu bật "Enhanced push security" trên Expo |
 | `ORDER_PAYMENT_TIMEOUT_MINUTES` | Đơn chưa thanh toán quá thời gian này sẽ tự hủy (mặc định 15) |
 | `PUBLIC_URL` | Địa chỉ gốc để tạo link ảnh upload |
+| `STRIPE_SECRET_KEY` | `sk_test_...` / `sk_live_...`. **Bí mật.** Trống = tắt thanh toán (endpoint trả 503) |
+| `STRIPE_WEBHOOK_SECRET` | `whsec_...` để xác minh webhook. **Bí mật.** |
+| `STRIPE_PUBLISHABLE_KEY` | `pk_...`, công khai; gửi kèm cho app cùng `clientSecret` |
 
 ## Cấu trúc
 
@@ -107,6 +125,7 @@ src/
 ├── stores/        # Cửa hàng
 ├── menu/          # Danh mục, món, nhóm tùy chọn, tùy chọn
 ├── orders/        # Đơn hàng: tính giá, trạng thái, job hủy đơn quá hạn
+├── payments/      # Stripe: PaymentIntent, webhook, hoàn tiền (móc vào việc đổi trạng thái đơn)
 ├── chat/          # Chat khách và quán (REST + chat.gateway.ts cho WebSocket)
 ├── realtime/      # Socket.IO: xác thực kết nối, room, kiểu dữ liệu event, gửi event
 ├── push/          # Gửi push qua Expo

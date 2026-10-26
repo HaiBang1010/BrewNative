@@ -13,6 +13,7 @@ import {
   UpdateDateColumn,
   type Relation,
 } from 'typeorm';
+import { Payment } from '../../payments/entities/payment.entity.js';
 import { Store } from '../../stores/entities/store.entity.js';
 import { User } from '../../users/entities/user.entity.js';
 import { OrderItem } from './order-item.entity.js';
@@ -77,6 +78,10 @@ export class Order {
     cascade: ['insert'],
   })
   statusHistory: Relation<OrderStatusHistory[]>;
+
+  /** Stripe PaymentIntents for this order (usually one). */
+  @OneToMany(() => Payment, (payment) => payment.order)
+  payments: Relation<Payment[]>;
 
   @CreateDateColumn({ type: 'timestamptz' })
   createdAt: Date;

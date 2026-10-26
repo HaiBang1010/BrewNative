@@ -14,7 +14,7 @@ const TRANSITIONS: Record<
   },
   [OrderStatus.Paid]: {
     [OrderStatus.Accepted]: ['staff'],
-    // TODO(stripe): refund the payment when staff rejects a paid order.
+    // The payments module refunds the charge (see PaymentsService).
     [OrderStatus.Cancelled]: ['staff'],
   },
   [OrderStatus.Accepted]: { [OrderStatus.Preparing]: ['staff'] },

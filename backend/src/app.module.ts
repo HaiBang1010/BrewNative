@@ -14,6 +14,7 @@ import { buildDatabaseOptions } from './database/database-options.js';
 import { HealthModule } from './health/health.module.js';
 import { MenuModule } from './menu/menu.module.js';
 import { OrdersModule } from './orders/orders.module.js';
+import { PaymentsModule } from './payments/payments.module.js';
 import { PushModule } from './push/push.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
 import { StoresModule } from './stores/stores.module.js';
@@ -49,6 +50,7 @@ import { UsersModule } from './users/users.module.js';
     StoresModule,
     MenuModule,
     OrdersModule,
+    PaymentsModule,
     ChatModule,
   ],
   providers: [

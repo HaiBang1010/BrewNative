@@ -7,7 +7,7 @@ App đặt đồ uống cho quán cà phê, dùng để học React Native + Exp
 ```
 .
 ├── mobile/    # App React Native (Expo SDK 58, TypeScript)
-├── backend/   # NestJS API + WebSocket (Stripe sắp làm), PostgreSQL chạy bằng Docker
+├── backend/   # NestJS API + WebSocket + Stripe, PostgreSQL chạy bằng Docker
 └── docs/      # Tài liệu của dự án
 ```
 

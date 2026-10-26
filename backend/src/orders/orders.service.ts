@@ -7,7 +7,13 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectDataSource, InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, LessThan, Repository } from 'typeorm';
+import {
+  DataSource,
+  In,
+  LessThan,
+  Repository,
+  type EntityManager,
+} from 'typeorm';
 import {
   paginate,
   type PaginationQueryDto,
@@ -34,9 +40,37 @@ const DETAIL_RELATIONS = {
   store: true,
   items: { options: true },
   statusHistory: true,
+  payments: true,
 } as const;
 
-const DETAIL_ORDER = { statusHistory: { createdAt: 'ASC' } } as const;
+const DETAIL_ORDER = {
+  statusHistory: { createdAt: 'ASC' },
+  payments: { createdAt: 'ASC' },
+} as const;
+
+export type TransitionContext = {
+  /** The transaction the status change runs in; the order row is locked. */
+  manager: EntityManager;
+  order: Order;
+  from: OrderStatus;
+  to: OrderStatus;
+  actor: StatusActor;
+};
+
+/**
+ * Runs inside the transition's transaction, after the transition is known to be
+ * allowed and before it is saved. Throwing aborts the transition.
+ * Lets other modules (payments) react without OrdersService depending on them.
+ */
+export type TransitionHook = (ctx: TransitionContext) => Promise<void>;
+
+/** What a committed transition hands to afterTransition(). */
+export type TransitionResult = {
+  order: Order;
+  from: OrderStatus;
+  to: OrderStatus;
+  actor: StatusActor;
+};
 
 /** Push text sent to the customer when their order reaches a status. */
 const CUSTOMER_PUSH: Partial<Record<OrderStatus, (code: string) => string>> = {
@@ -48,6 +82,7 @@ const CUSTOMER_PUSH: Partial<Record<OrderStatus, (code: string) => string>> = {
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
+  private readonly hooks: TransitionHook[] = [];
 
   constructor(
     @InjectDataSource() private readonly dataSource: DataSource,
@@ -100,8 +135,8 @@ export class OrdersService {
       ],
     });
     // Cascades insert items, their options and the first history row in one transaction.
+    // The app then calls POST /orders/:id/payment to get a Stripe PaymentIntent.
     const saved = await this.orders.save(order);
-    // TODO(stripe): create a PaymentIntent here and return its clientSecret.
     return this.getForUser(userId, saved.id);
   }
 
@@ -169,7 +204,7 @@ export class OrdersService {
 
   // ---------- System ----------
 
-  /** Called by the Stripe webhook later; by the dev endpoint for now. */
+  /** Dev-only shortcut (DevOrdersController); real payments go through the Stripe webhook. */
   async markPaid(id: string): Promise<Order> {
     await this.transition(id, OrderStatus.Paid, 'system', null);
     return this.getForStaff(id);
@@ -189,7 +224,7 @@ export class OrdersService {
       try {
         await this.transition(id, OrderStatus.Cancelled, 'system', null);
       } catch (error) {
-        // Paid in the meantime: nothing to do.
+        // Paid in the meantime, or a payment is still processing: leave it.
         if (!(error instanceof ConflictException)) throw error;
       }
     }
@@ -198,9 +233,13 @@ export class OrdersService {
 
   // ---------- Core ----------
 
+  addTransitionHook(hook: TransitionHook): void {
+    this.hooks.push(hook);
+  }
+
   /**
-   * The only place that changes an order's status. Locks the row so two staff
-   * clicking at the same time can't both move it, and records history.
+   * Changes an order's status in its own transaction, then emits events.
+   * The only way status changes, together with transitionWithin().
    */
   private async transition(
     id: string,
@@ -208,42 +247,62 @@ export class OrdersService {
     actor: StatusActor,
     changedById: string | null,
   ): Promise<void> {
-    let from: OrderStatus | undefined;
-    const order = await this.dataSource.transaction(async (manager) => {
-      const current = await manager.findOne(Order, {
-        where: { id },
-        lock: { mode: 'pessimistic_write' },
-      });
-      if (!current) throw new NotFoundException('Order not found');
-      if (!canTransition(current.status, to, actor)) {
-        throw new ConflictException(
-          `Cannot change order from "${current.status}" to "${to}"`,
-        );
-      }
+    const result = await this.dataSource.transaction((manager) =>
+      this.transitionWithin(manager, id, to, actor, changedById),
+    );
+    this.afterTransition(result);
+  }
 
-      from = current.status;
-      await manager.update(Order, id, { status: to });
-      await manager.insert(OrderStatusHistory, {
-        orderId: id,
-        fromStatus: from,
-        toStatus: to,
-        changedById,
-      });
-      current.status = to;
-      return current;
+  /**
+   * Status change inside a caller's transaction (e.g. the Stripe webhook, which
+   * also records the event). Locks the order row so concurrent changes are
+   * serialized, checks the transition is allowed, runs hooks, records history.
+   * The caller must call afterTransition() once the transaction has committed.
+   */
+  async transitionWithin(
+    manager: EntityManager,
+    id: string,
+    to: OrderStatus,
+    actor: StatusActor,
+    changedById: string | null,
+  ): Promise<TransitionResult> {
+    const order = await manager.findOne(Order, {
+      where: { id },
+      lock: { mode: 'pessimistic_write' },
     });
+    if (!order) throw new NotFoundException('Order not found');
+    const from = order.status;
+    if (!canTransition(from, to, actor)) {
+      throw new ConflictException(
+        `Cannot change order from "${from}" to "${to}"`,
+      );
+    }
 
+    for (const hook of this.hooks) {
+      await hook({ manager, order, from, to, actor });
+    }
+
+    await manager.update(Order, id, { status: to });
+    await manager.insert(OrderStatusHistory, {
+      orderId: id,
+      fromStatus: from,
+      toStatus: to,
+      changedById,
+    });
+    order.status = to;
+    return { order, from, to, actor };
+  }
+
+  /** Logs, emits order:updated and sends pushes. Call only after the transaction committed. */
+  afterTransition({ order, from, to, actor }: TransitionResult): void {
     this.logger.log(`Order ${order.code}: ${from} -> ${to} (${actor})`);
-
-    // Emitted after the transaction commits, so a client that refetches on this
-    // event always sees the new status.
     const event: OrderUpdatedEvent = {
       orderId: order.id,
       code: order.code,
       userId: order.userId,
       storeId: order.storeId,
       status: to,
-      previousStatus: from!,
+      previousStatus: from,
       changedAt: new Date().toISOString(),
     };
     this.realtime.emitToUserAndStaff(

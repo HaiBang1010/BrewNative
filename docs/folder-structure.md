@@ -58,12 +58,13 @@ Dự án NestJS. Chi tiết cách chạy và cổng: [../backend/README.md](../b
 ```
 backend/
 ├── src/
-│   ├── auth/ users/ stores/ menu/ orders/ chat/   # Mỗi tính năng một module
+│   ├── auth/ users/ stores/ menu/ orders/ payments/ chat/   # Mỗi tính năng một module
 │   │   ├── entities/    # Entity TypeORM (bảng)
 │   │   ├── dto/         # Dữ liệu vào, có validate
 │   │   ├── *.module.ts
 │   │   ├── *.controller.ts
 │   │   └── *.service.ts
+│   ├── realtime/        # Socket.IO: kết nối, room, event
 │   ├── push/            # Gửi push qua Expo
 │   ├── uploads/         # Nhận file ảnh
 │   ├── health/          # GET /api/health

@@ -2,8 +2,7 @@
 
 Thiết kế dữ liệu và luồng xử lý. Code thật nằm ở `backend/src/**/entities/*.entity.ts`; khi đổi entity thì cập nhật file này.
 
-**Trạng thái:** đã làm tất cả, **trừ** Stripe (bảng `payments`, `stripe_events`, webhook).
-Những chỗ đó trong code được đánh dấu `TODO(stripe)`.
+**Trạng thái:** backend đã làm hết các phần trong tài liệu này (gồm WebSocket và Stripe).
 
 Sơ đồ viết bằng [Mermaid](https://mermaid.js.org/). GitHub hiển thị sẵn; trong VS Code cài extension
 "Markdown Preview Mermaid Support" rồi mở preview (`Cmd + Shift + V`).
@@ -58,7 +57,7 @@ erDiagram
   orders ||--|{ order_items : "gồm"
   order_items ||--o{ order_item_options : "chọn"
   orders ||--o{ order_status_history : "lịch sử"
-  orders ||--o{ payments : "thanh toán (chưa làm)"
+  orders ||--o{ payments : "thanh toán"
   conversations ||--o{ messages : "gồm"
 
   users {
@@ -182,7 +181,9 @@ erDiagram
     string stripe_payment_intent_id UK
     int amount
     string currency
-    enum status
+    enum status "giống PaymentIntent.status của Stripe"
+    int amount_refunded "từ charge.refunded"
+    text last_error "vd: Your card was declined."
     timestamp created_at
     timestamp updated_at
   }
@@ -245,9 +246,12 @@ stateDiagram-v2
 ```
 
 Ai được đổi trạng thái nào được định nghĩa ở `backend/src/orders/order-status.ts` (có unit test).
-Chưa có Stripe nên dùng tạm `POST /api/dev/orders/:id/mark-paid` để chuyển sang `paid` (tắt khi `NODE_ENV=production`).
+Đơn chỉ sang `paid` khi webhook `payment_intent.succeeded` của Stripe tới. Khi phát triển mà không muốn qua Stripe,
+có thể dùng `POST /api/dev/orders/:id/mark-paid` (tắt khi `NODE_ENV=production`).
 
-Trạng thái thanh toán (`payments.status`, sẽ làm cùng Stripe) bám theo Stripe: `requires_payment_method`, `processing`, `succeeded`, `failed`, `refunded`.
+`payments.status` giống hệt `PaymentIntent.status` của Stripe: `requires_payment_method` (chưa trả hoặc thẻ bị từ chối,
+lý do ở `last_error`), `requires_action` (cần xác thực 3DS), `processing`, `succeeded`, `canceled`.
+Hoàn tiền ghi ở `amount_refunded`.
 
 ## Data flow
 
@@ -333,9 +337,13 @@ sequenceDiagram
   App->>API: POST /api/orders {storeId, items[{productId, quantity, optionIds}]}
   API->>DB: đọc giá hiện tại, kiểm tra món còn bán, tính total
   API->>DB: tạo order (pending_payment) + order_items
-  API->>Stripe: tạo PaymentIntent {amount: total, currency: vnd, metadata.orderId}
+  API-->>App: order
+
+  App->>API: POST /api/orders/:id/payment
+  API->>DB: khóa đơn, còn pending_payment không?
+  API->>Stripe: tạo PaymentIntent {amount: total, currency: vnd, metadata.orderId}<br/>(hoặc dùng lại cái đang chờ trả)
   API->>DB: tạo payment (requires_payment_method)
-  API-->>App: {orderId, clientSecret}
+  API-->>App: {paymentIntentId, clientSecret, publishableKey, amount, currency}
 
   App->>Stripe: PaymentSheet (thẻ / Apple Pay / Google Pay)
   Stripe-->>App: kết quả trên giao diện
@@ -349,6 +357,21 @@ sequenceDiagram
 ```
 
 Secret key của Stripe chỉ nằm trong `backend/.env`. App chỉ có publishable key và `clientSecret` của từng đơn.
+
+**Các tình huống đã xử lý** (đều có test e2e chạy với Stripe test mode):
+
+| Tình huống | Backend làm gì |
+|---|---|
+| App đóng giữa chừng, mở lại rồi trả tiền | `POST /orders/:id/payment` trả lại **cùng** PaymentIntent nếu nó vẫn trả được |
+| Thẻ bị từ chối | Đơn vẫn `pending_payment`; lý do lưu ở `payments.last_error`; gọi lại `/payment` để thử thẻ khác |
+| Stripe gửi trùng một webhook | Chỉ xử lý lần đầu (bảng `stripe_events`) |
+| Số tiền nhận khác tổng đơn | Không chuyển sang `paid`, ghi log lỗi |
+| Khách hủy hoặc hết 15 phút chưa trả | PaymentIntent bị hủy trên Stripe trước, rồi mới hủy đơn |
+| Đã trả xong nhưng webhook chưa tới mà khách bấm hủy | Từ chối (409); webhook tới thì đơn thành `paid` |
+| Quán từ chối đơn đã trả (`paid` → `cancelled`) | Hoàn tiền toàn bộ trên Stripe; `amount_refunded` cập nhật khi webhook `charge.refunded` tới |
+| Tiền về sau khi đơn đã bị hủy | Tự hoàn tiền |
+| Tổng đơn dưới mức tối thiểu của Stripe (khoảng $0.50, ~12.000₫) | Trả 400 kèm thông báo của Stripe |
+| Chữ ký webhook sai | 400, không làm gì |
 
 ### 4. Cập nhật trạng thái đơn theo thời gian thực
 
@@ -513,7 +536,8 @@ Danh sách đầy đủ, kèm schema và nút "Try it out": **http://localhost:3
 | Admin: menu | `/api/admin/categories`, `/api/admin/products` (+ `/:id/image`, `/:id/option-groups`), `/api/admin/option-groups/:id` (+ `/options`), `/api/admin/options/:id` | admin |
 | Admin: cửa hàng | `GET` `POST /api/admin/stores`, `PATCH /api/admin/stores/:id` | admin |
 | Admin: user | `GET /api/admin/users`, `GET /api/admin/users/:id`, `PATCH /api/admin/users/:id/role` | admin |
-| Dev | `POST /api/dev/orders/:id/mark-paid` (thay webhook Stripe khi chưa có) | chủ đơn hoặc staff |
-| Stripe | `POST /api/webhooks/stripe` | **chưa làm** |
+| Thanh toán | `POST /api/orders/:id/payment` (trả về tham số cho PaymentSheet) | chủ đơn |
+| Stripe | `POST /api/webhooks/stripe` (Stripe gọi, xác minh bằng header `Stripe-Signature`) | Stripe |
+| Dev | `POST /api/dev/orders/:id/mark-paid` (bỏ qua Stripe khi phát triển) | chủ đơn hoặc staff |
 
 WebSocket: xem mục [WebSocket](#websocket) ở trên.
