@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "ReactNative",
-    "slug": "ReactNative",
+    "name": "Brew",
+    "slug": "brew",
     "version": "1.0.0",
     "orientation": "portrait",
     "scheme": "brew",

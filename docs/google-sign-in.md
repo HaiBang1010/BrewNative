@@ -27,9 +27,10 @@ Bundle ID và package name lấy từ [mobile/app.json](../mobile/app.json); n�
 
 **Lấy SHA-1 cho Android**
 
-- Bản dev build trên máy (`npx expo run:android`): dùng debug keystore
+- Bản dev build trên máy (`npm run android`): app được ký bằng `mobile/android/app/debug.keystore`
+  (do `npx expo prebuild` tạo ra), **không phải** `~/.android/debug.keystore`. Lấy SHA-1:
   ```sh
-  keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android | grep SHA1
+  cd mobile/android && ./gradlew signingReport   # xem dòng SHA1 của variant debug
   ```
 - Bản build bằng EAS: `eas credentials`, chọn Android, xem SHA-1 của keystore.
 - Bản phát hành trên Google Play: Play Console → App integrity → **App signing key certificate** → SHA-1.
