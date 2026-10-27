@@ -2,9 +2,20 @@ import { Link } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
+import { useMe } from '@/lib/queries';
+
+function greeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 11) return 'Chào buổi sáng';
+  if (hour < 14) return 'Chào buổi trưa';
+  if (hour < 18) return 'Chào buổi chiều';
+  return 'Chào buổi tối';
+}
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
+  const { data: me } = useMe();
+  const firstName = me?.fullName.split(' ').at(-1);
 
   return (
     <ScrollView
@@ -12,7 +23,10 @@ export default function HomeScreen() {
       contentContainerStyle={{ paddingTop: insets.top + 16 }}
     >
       <View>
-        <Text className="text-base text-stone-500">Chào buổi sáng 👋</Text>
+        <Text className="text-base text-stone-500">
+          {greeting()}
+          {firstName ? `, ${firstName}` : ''} 👋
+        </Text>
         <Text className="text-3xl font-extrabold text-stone-900">Hôm nay uống gì?</Text>
       </View>
 

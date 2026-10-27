@@ -1,26 +1,38 @@
 import { Link } from 'expo-router';
-import { FlatList, Pressable, Text, View } from 'react-native';
-import { MOCK_ORDERS, formatVnd } from '@/constants/mock-data';
+import { FlatList, Pressable, RefreshControl, Text, View } from 'react-native';
+import { EmptyView, ErrorView, LoadingView } from '@/components/ui/screen-state';
+import { ORDER_STATUS_LABEL, formatDateTime, formatVnd } from '@/lib/format';
+import { useOrders } from '@/lib/queries';
 
 export default function OrdersScreen() {
+  const { data, error, isPending, isRefetching, refetch } = useOrders();
+
+  if (isPending) return <LoadingView />;
+  if (error) return <ErrorView error={error} onRetry={refetch} />;
+
   return (
     <FlatList
-      data={MOCK_ORDERS}
-      keyExtractor={(item) => item.id}
+      data={data.items}
+      keyExtractor={(order) => order.id}
       contentContainerClassName="gap-3 p-5"
-      ListHeaderComponent={
-        <Text className="mb-1 text-sm text-stone-500">
-          Dữ liệu mẫu. Sẽ lấy từ GET /api/orders ở bước kết nối backend.
-        </Text>
+      refreshControl={
+        <RefreshControl refreshing={isRefetching} onRefresh={() => void refetch()} tintColor="#7C4A2D" />
       }
-      renderItem={({ item }) => (
-        <Link href={{ pathname: '/orders/[id]', params: { id: item.id } }} asChild>
-          <Pressable className="flex-row items-center justify-between rounded-2xl bg-white p-4 active:opacity-80">
-            <View className="gap-1">
-              <Text className="text-base font-semibold text-stone-900">{item.code}</Text>
-              <Text className="text-stone-500">{item.status}</Text>
+      ListEmptyComponent={<EmptyView text="Bạn chưa có đơn nào" />}
+      renderItem={({ item: order }) => (
+        <Link href={{ pathname: '/orders/[id]', params: { id: order.id } }} asChild>
+          <Pressable className="gap-2 rounded-2xl bg-white p-4 active:opacity-80">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-base font-semibold text-stone-900">{order.code}</Text>
+              <Text className="font-semibold text-stone-900">{formatVnd(order.total)}</Text>
             </View>
-            <Text className="font-semibold text-stone-900">{formatVnd(item.total)}</Text>
+            <View className="flex-row items-center justify-between">
+              <Text className="text-brand">{ORDER_STATUS_LABEL[order.status]}</Text>
+              <Text className="text-sm text-stone-500">{formatDateTime(order.createdAt)}</Text>
+            </View>
+            <Text className="text-sm text-stone-500" numberOfLines={1}>
+              {order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')}
+            </Text>
           </Pressable>
         </Link>
       )}

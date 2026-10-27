@@ -1,15 +1,25 @@
 import '../global.css';
 
-import { Stack } from 'expo-router';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { queryClient, useRefetchOnAppFocus } from '@/lib/query-client';
+
+// Keep the splash screen up until we know whether the user is signed in,
+// so the login screen doesn't flash before jumping to the home screen.
+SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useRefetchOnAppFocus();
+
   return (
-    <AuthProvider>
-      <RootNavigator />
-      <StatusBar style="dark" />
-    </AuthProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RootNavigator />
+        <StatusBar style="dark" />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }
 
@@ -20,7 +30,11 @@ export default function RootLayout() {
  * group that became unavailable is dropped.
  */
 function RootNavigator() {
-  const { isSignedIn } = useAuth();
+  const { isLoading, isSignedIn } = useAuth();
+
+  if (isLoading) return null;
+  SplashScreen.hide();
+
   return (
     <Stack screenOptions={{ headerShown: false }}>
       <Stack.Protected guard={isSignedIn} redirectTo="/login">

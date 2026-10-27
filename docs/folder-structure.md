@@ -28,10 +28,18 @@ mobile/
 │   ├── components/
 │   │   └── ui/                 # Button, TextField, ComingSoon...
 │   ├── hooks/                  # Custom hook
-│   ├── lib/                    # auth.tsx, (sắp có) API client, socket client
+│   ├── lib/
+│   │   ├── api.ts              # Gọi backend: thêm token, tự refresh khi 401 (chỉ 1 lần refresh cùng lúc)
+│   │   ├── session.ts          # Client API dùng chung + lưu token vào keychain (expo-secure-store)
+│   │   ├── auth.tsx            # AuthProvider / useAuth: đăng nhập, đăng ký, Google, đăng xuất
+│   │   ├── queries.ts          # Hook TanStack Query: useMe, useMenu, useProduct, useOrders, useOrder
+│   │   ├── query-client.ts     # Cấu hình cache, refetch khi app quay lại foreground
+│   │   ├── google-sign-in.ts   # Google Sign-In (chỉ chạy trên development build)
+│   │   ├── errors.ts           # Đổi lỗi thành câu tiếng Việt cho người dùng
+│   │   └── format.ts           # Định dạng tiền VND, ngày giờ, tên trạng thái đơn
 │   ├── stores/                 # State toàn cục (Zustand): giỏ hàng...
-│   ├── constants/              # Hằng số, dữ liệu mẫu tạm thời
-│   ├── types/                  # Type TypeScript dùng chung
+│   ├── constants/              # Hằng số
+│   ├── types/                  # api.ts: kiểu dữ liệu backend trả về
 │   └── global.css              # Tailwind; import một lần ở app/_layout.tsx
 ├── assets/                     # Icon, splash, font, ảnh tĩnh
 ├── app.json                    # Cấu hình Expo: tên, bundle id, scheme "brew", plugin
@@ -39,7 +47,7 @@ mobile/
 ├── metro.config.js             # NativeWind đọc src/global.css
 ├── tailwind.config.js          # Màu brand, đường dẫn file dùng className
 ├── nativewind-env.d.ts         # Kiểu TypeScript cho className
-├── .env                        # EXPO_PUBLIC_... (không commit)
+├── .env                        # EXPO_PUBLIC_... (không commit); mẫu ở .env.example
 ├── package.json                # "main": "expo-router/entry"
 └── tsconfig.json               # Alias @/* -> src/*
 ```
@@ -65,8 +73,8 @@ mobile/
 Thư mục trong ngoặc như `(auth)`, `(app)`, `(tabs)` là **nhóm**: dùng để gom màn hình và layout, không xuất hiện trong
 đường dẫn. Deep link: `brew://orders/123` (bản build thật) hoặc `exp://<IP>:8081/--/orders/123` (Expo Go).
 
-Đăng nhập hiện chỉ là **tạm** (`src/lib/auth.tsx`: một biến trong bộ nhớ) và dữ liệu menu/đơn là dữ liệu mẫu
-(`src/constants/mock-data.ts`); bước kết nối backend sẽ thay cả hai.
+Các màn hình lấy dữ liệu thật từ backend (`EXPO_PUBLIC_API_URL` trong `.env`). Chưa có: chọn tùy chọn và giỏ hàng,
+thanh toán, cập nhật realtime qua WebSocket, chat.
 
 ### Quy ước
 
@@ -83,7 +91,10 @@ Thư mục trong ngoặc như `(auth)`, `(app)`, `(tabs)` là **nhóm**: dùng �
   `contentInsetAdjustmentBehavior="automatic"`. Từ iOS 26 thanh tiêu đề nổi đè lên nội dung; thiếu prop này thì
   phần đầu màn hình bị che (React Native mặc định là `"never"`).
 - Sau khi sửa `tailwind.config.js`, `babel.config.js` hoặc `metro.config.js`: chạy `npx expo start --clear`.
-- **Không gọi `fetch` trực tiếp trong màn hình**; gọi qua `lib/` (và TanStack Query).
+- **Không gọi `fetch` trực tiếp trong màn hình.** Đọc dữ liệu bằng hook trong `lib/queries.ts`;
+  gọi API khác qua `api` trong `lib/session.ts`.
+- Màn hình lấy dữ liệu thì xử lý đủ 3 trạng thái: `isPending` → `<LoadingView />`, `error` → `<ErrorView />`,
+  có dữ liệu → nội dung. Danh sách có kéo để làm mới (`RefreshControl`).
 - Thư mục `ios/` và `android/` do Expo tự sinh khi build (`npx expo prebuild` / `run:ios`), đã nằm trong `.gitignore`,
   không sửa tay.
 

@@ -18,9 +18,12 @@ Cài package và chạy lệnh **bên trong thư mục tương ứng**, không c
 
 ```sh
 cd mobile
-npm install   # lần đầu
-npx expo start   # rồi bấm i (iOS Simulator) hoặc quét QR bằng Expo Go
+npm install            # lần đầu
+cp .env.example .env   # lần đầu, rồi sửa EXPO_PUBLIC_API_URL thành IP của Mac
+npx expo start         # rồi bấm i (iOS Simulator) hoặc quét QR bằng Expo Go
 ```
+
+Cần backend đang chạy (xem bên dưới). Khi chạy dev, màn đăng nhập điền sẵn tài khoản mẫu `customer@brew.local`.
 
 Hiện app vẫn chạy được trên Expo Go. Khi tới phần cần code native (Google Sign-In, Stripe, push) thì dùng
 development build: `npm run ios` / `npm run android` (`expo run:*`).
