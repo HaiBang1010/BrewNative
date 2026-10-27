@@ -96,6 +96,11 @@ export function createApiClient(options: {
     put: <T>(path: string, body?: unknown, opts?: RequestOptions) =>
       request<T>('PUT', path, { ...opts, body }),
     delete: <T>(path: string, opts?: RequestOptions) => request<T>('DELETE', path, opts),
+    /**
+     * Gets a new access token (for the WebSocket, which can't retry an HTTP request).
+     * Shares the in-flight refresh with HTTP requests. Null = the session is over.
+     */
+    refreshAccessToken,
   };
 }
 

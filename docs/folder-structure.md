@@ -26,11 +26,20 @@ mobile/
 ├── src/
 │   ├── app/                    # Mỗi file là một màn hình (route). Xem bảng bên dưới
 │   ├── components/
-│   │   ├── ui/                 # Button, TextField, Chip, QuantityStepper, LoadingView...
-│   │   └── cart-button.tsx     # Icon giỏ hàng có badge (header màn Menu)
+│   │   ├── ui/                 # Text (font Sora), Button, TextField, Chip, QuantityStepper, LoadingView...
+│   │   ├── menu/               # ProductCard (ô lưới 2 cột), CategoryChips, PromoBanner
+│   │   ├── chat/chat-thread.tsx  # Giao diện chat dùng chung cho khách và quán
+│   │   ├── chat/chat-scroll-view.tsx # Danh sách tin nhắn đi theo bàn phím (KeyboardChatScrollView)
+│   │   ├── staff-order-card.tsx  # Thẻ đơn của quán + hook chạy hành động (có hỏi lại khi hoàn tiền)
+│   │   ├── floating-tab-bar.tsx  # Tab bar nổi, chỉ có icon
+│   │   └── cart-button.tsx     # Icon giỏ hàng có badge (header màn Menu, ô vuông cạnh ô tìm kiếm ở Trang chủ)
 │   ├── hooks/                  # Hook React: thêm cache (TanStack Query) cho services/
 │   │   ├── queries.ts          # useMe, useMenu, useOrders... và useCreateOrder, useCancelOrder
-│   │   └── payments.ts         # usePayOrder (Stripe PaymentSheet), useConfirmPayment
+│   │   ├── payments.ts         # usePayOrder (Stripe PaymentSheet), useConfirmPayment
+│   │   ├── cart-check.ts       # useCartCheck: so giỏ hàng với menu hiện tại (giá mới, món/tùy chọn đã hết)
+│   │   ├── chat.ts             # useChatMessages (cuộn lên tải thêm), useSendMessage, useChatSummary
+│   │   ├── staff.ts            # Màn quán: useStaffOrders, useUpdateOrderStatus, useStaffConversations...
+│   │   └── status-bar.ts       # useLightStatusBar: chữ status bar màu trắng cho màn có nền tối
 │   ├── services/               # Gọi ra bên ngoài: backend, keychain, Google
 │   │   ├── api-client.ts       # fetch + token + tự refresh khi 401 (1 lần refresh cùng lúc)
 │   │   ├── session.ts          # Client API dùng chung + lưu token vào keychain (expo-secure-store)
@@ -38,10 +47,15 @@ mobile/
 │   │   ├── user.service.ts     # /me
 │   │   ├── menu.service.ts     # /menu, /products, /stores
 │   │   ├── order.service.ts    # /orders và thanh toán
+│   │   ├── chat.service.ts     # /chat; gửi tin qua WebSocket, không trả lời thì gửi qua REST
+│   │   ├── staff.service.ts    # /admin: đơn hàng, đổi trạng thái, chat với khách
+│   │   ├── socket.ts           # Kết nối Socket.IO duy nhất của app
 │   │   └── google-sign-in.ts   # SDK Google Sign-In
 │   ├── lib/                    # Cấu hình thư viện và provider dùng cho cả app
 │   │   ├── app-providers.tsx   # Gom mọi provider; app/_layout.tsx chỉ dùng cái này
 │   │   ├── auth-provider.tsx   # AuthProvider / useAuth: trạng thái đăng nhập
+│   │   ├── socket-provider.tsx # Kết nối WebSocket khi đăng nhập; event của server → cập nhật cache
+│   │   ├── nativewind-interop.ts # Cho component của thư viện khác dùng được className
 │   │   ├── query-client.ts     # Cấu hình TanStack Query
 │   │   ├── query-keys.ts       # Khóa cache dùng chung
 │   │   └── stripe.ts           # Publishable key, URL quay lại app của Stripe
@@ -51,19 +65,26 @@ mobile/
 │   │   ├── api.ts              # Dữ liệu backend trả về và body gửi lên
 │   │   ├── auth.ts             # Tokens, TokenStore
 │   │   ├── cart.ts             # CartItem, ChosenOption, Selection
-│   │   └── payment.ts          # ConfirmResult, PayResult
+│   │   ├── payment.ts          # ConfirmResult, PayResult
+│   │   └── realtime.ts         # Event WebSocket, ChatMessage, ChatSummary
 │   ├── utils/                  # Hàm thuần: không React, không gọi mạng
 │   │   ├── api-error.ts        # Lớp ApiError
 │   │   ├── errors.ts           # Đổi lỗi thành câu tiếng Việt
 │   │   ├── format.ts           # Tiền VND, ngày giờ, tên trạng thái đơn
-│   │   └── cart-pricing.ts     # Chọn tùy chọn món, kiểm tra min/max, tính giá
-│   ├── constants/              # Hằng số
+│   │   ├── cart-pricing.ts     # Chọn tùy chọn món, kiểm tra min/max, tính giá
+│   │   ├── chat-cache.ts       # Thêm tin vào cache chat không bị trùng
+│   │   ├── uuid.ts             # clientId cho tin nhắn
+│   │   ├── jwt.ts              # Đọc role trong access token (không xác minh; backend mới xác minh)
+│   │   ├── staff-orders.ts     # Nút hành động cho từng trạng thái đơn (khớp quy tắc backend), các tab
+│   │   └── search.ts           # Tìm món không phân biệt dấu ("ca phe" ra "Cà phê")
+│   ├── constants/
+│   │   └── theme.ts            # COLORS, FONTS cho prop không nhận className (màu icon, tintColor, header)
 │   └── global.css              # Tailwind; import một lần ở app/_layout.tsx
-├── assets/                     # Icon, splash, font, ảnh tĩnh
+├── assets/                     # Icon, splash, ảnh tĩnh (images/figma/: ảnh lấy từ thiết kế Figma)
 ├── app.json                    # Cấu hình Expo: tên, bundle id, scheme "brew", plugin
 ├── babel.config.js             # NativeWind (biến className thành style)
 ├── metro.config.js             # NativeWind đọc src/global.css
-├── tailwind.config.js          # Màu brand, đường dẫn file dùng className
+├── tailwind.config.js          # Màu và font theo styleguide Figma, đường dẫn file dùng className
 ├── nativewind-env.d.ts         # Kiểu TypeScript cho className
 ├── .env                        # EXPO_PUBLIC_... (không commit); mẫu ở .env.example
 ├── package.json                # "main": "expo-router/entry"
@@ -76,23 +97,34 @@ mobile/
 |---|---|---|
 | `_layout.tsx` | | Gốc: provider, chặn route theo đăng nhập (`Stack.Protected`) |
 | `(auth)/login.tsx`, `(auth)/register.tsx` | `/login`, `/register` | Chỉ mở được khi **chưa** đăng nhập |
+| `(app)/...` | `/`, `/menu`, `/cart`... | Chỉ cho tài khoản **customer** |
+| `admin/...` | `/admin/...` | Chỉ cho tài khoản **staff** và **admin**; role đọc từ access token, nên mở app không cần mạng vẫn biết vào khu nào |
 | `(app)/_layout.tsx` | | Stack sau khi đăng nhập |
 | `(app)/(tabs)/_layout.tsx` | | Tab bar 4 tab |
-| `(app)/(tabs)/index.tsx` | `/` | Trang chủ |
-| `(app)/(tabs)/menu.tsx` | `/menu` | Menu |
+| `(app)/(tabs)/index.tsx` | `/` | Trang chủ: tìm món, banner, lọc theo danh mục, lưới món |
+| `(app)/(tabs)/menu.tsx` | `/menu` | Cả menu, chia theo danh mục |
 | `(app)/(tabs)/orders.tsx` | `/orders` | Danh sách đơn |
 | `(app)/(tabs)/profile.tsx` | `/profile` | Tài khoản |
-| `(app)/products/[id].tsx` | `/products/:id` | Chi tiết món, mở dạng modal |
+| `(app)/products/[id].tsx` | `/products/:id` | Chi tiết món |
 | `(app)/orders/[id].tsx` | `/orders/:id` | Theo dõi đơn (push notification mở vào đây) |
 | `(app)/cart.tsx` | `/cart` | Giỏ hàng |
 | `(app)/chat.tsx` | `/chat` | Chat với quán |
+| `admin/(tabs)/orders.tsx` | `/admin/orders` | **Quán:** hàng đợi đơn theo trạng thái, nút cho bước tiếp theo |
+| `admin/(tabs)/chats.tsx` | `/admin/chats` | **Quán:** danh sách khách đang chat, số tin chưa đọc |
+| `admin/(tabs)/account.tsx` | `/admin/account` | **Quán:** tài khoản, đăng xuất |
+| `admin/orders/[id].tsx` | `/admin/orders/:id` | **Quán:** chi tiết đơn, khách, ghi chú, thanh toán |
+| `admin/chats/[id].tsx` | `/admin/chats/:id` | **Quán:** chat với một khách |
 | `+not-found.tsx` | | Đường dẫn không tồn tại |
 
 Thư mục trong ngoặc như `(auth)`, `(app)`, `(tabs)` là **nhóm**: dùng để gom màn hình và layout, không xuất hiện trong
 đường dẫn. Deep link: `brew://orders/123` (bản build thật) hoặc `exp://<IP>:8081/--/orders/123` (Expo Go).
 
-Các màn hình lấy dữ liệu thật từ backend (`EXPO_PUBLIC_API_URL` trong `.env`). Chưa có: cập nhật realtime qua
-WebSocket, chat, push notification.
+Các màn hình lấy dữ liệu thật từ backend (`EXPO_PUBLIC_API_URL` trong `.env`). Chưa có: push notification.
+
+**Realtime:** `lib/socket-provider.tsx` giữ WebSocket kết nối khi đã đăng nhập. Event `order:updated` làm màn đơn và
+danh sách đơn tự tải lại; `message:new` thêm tin vào màn chat; `conversation:read` cập nhật số tin chưa đọc. Token
+hết hạn thì refresh rồi kết nối lại; mỗi lần kết nối lại thì tải lại dữ liệu đang có trong cache, vì event phát ra
+lúc mất kết nối không được gửi lại.
 
 **Từ bước giỏ hàng, app không chạy trên Expo Go nữa**: MMKV (giỏ hàng) và Google Sign-In là code native mà Expo Go
 không có. Dùng development build (`npm run ios` / `npm run android`).
@@ -100,6 +132,12 @@ không có. Dùng development build (`npm run ios` / `npm run android`).
 Luồng đặt món: **trả tiền xong mới thành đơn**. Chi tiết món (chọn tùy chọn) → Giỏ hàng → bấm "Thanh toán":
 app tạo một đơn nháp (`POST /api/orders`, để server tính giá và tạo PaymentIntent) rồi mở Stripe PaymentSheet ngay
 trên màn giỏ hàng.
+- Giỏ hàng lưu giá lúc thêm món, và được giữ cả khi tắt app. Nên mỗi lần mở giỏ, `useCartCheck` tải lại chi tiết
+  từng món (menu không có giá tùy chọn) rồi kiểm tra như backend (`checkCartItem`, giống `order-pricing.ts`):
+  giá đổi thì cập nhật vào giỏ và báo khách; món hoặc tùy chọn đã hết thì hiện lý do trên dòng đó và khóa nút
+  Thanh toán đến khi khách xóa dòng.
+- Sau khi tạo đơn nháp, nếu `order.subtotal` (tiền món) của server khác tổng tiền khách đang thấy (giá vừa đổi), app hủy đơn nháp,
+  tải lại giá và không mở PaymentSheet.
 - Trả xong: app gọi `POST /api/orders/:id/payment/confirm`, xóa giỏ, chuyển sang màn đơn.
 - Đóng PaymentSheet hoặc lỗi: app hủy đơn nháp, **giỏ hàng giữ nguyên**.
 - Đơn nháp (chưa từng được trả) không hiện trong tab Đơn hàng.
@@ -133,11 +171,21 @@ Kiểu dùng ở nhiều file đặt trong `types/`; kiểu chỉ dùng bên tro
   Expo Router coi mọi file trong `app/` là một route, nên đừng đặt component hay helper vào đó.
 - **Component dùng ở một màn hình** thì đặt cạnh màn hình đó hoặc trong `components/<tên-tính-năng>/`.
   Component dùng ở nhiều nơi thì đặt trong `components/ui/`.
-- **Style bằng `className` (Tailwind).** Màu thương hiệu dùng `bg-brand`, `text-brand`, `bg-brand-50`...
-  (khai báo trong `tailwind.config.js`), không hardcode mã màu trong component.
+- **Giao diện theo thiết kế Figma** "Coffee Shop Mobile App Design" (chỉ lấy style, ảnh, bố cục; logic là của Brew,
+  ví dụ chỉ nhận tại quán, không giao hàng).
+- **Style bằng `className` (Tailwind).** Màu khai báo trong `tailwind.config.js`: `brand` (nâu cà phê), `ink`
+  (chữ: `text-ink`, `text-ink-soft`, `text-ink-muted`), `line` (viền), `surface` (nền), `night` (nền tối).
+  Không hardcode mã màu trong component; prop không nhận `className` thì dùng `COLORS` trong `constants/theme.ts`.
+- **Chữ: dùng `Text` của `@/components/ui/text`, không import `Text` từ `react-native`.** Font Sora được nạp theo
+  từng độ đậm, đặt theo tên PostScript (`Sora-SemiBold`...; tên khác thì iOS đo chữ sai, chữ bị cắt), nên `font-semibold` của Text gốc sẽ rơi về font hệ thống; `Text` của app tự
+  đổi `font-light/normal/medium/semibold/bold` sang đúng font. `TextInput` thì thêm class `font-sora`.
 - `className` chỉ có tác dụng trên component của React Native (`View`, `Text`, `Pressable`, `ScrollView`...).
   Với component của thư viện như `Link` của Expo Router, dùng `asChild` và đặt `className` lên phần tử con.
 - Icon: `@react-native-vector-icons/ionicons` (Expo khuyên dùng thay cho `@expo/vector-icons`).
+- **Bàn phím:** dùng `react-native-keyboard-controller`, không dùng `KeyboardAvoidingView`.
+  Form: `KeyboardAwareScrollView` (+ `KeyboardToolbar` nếu nhiều ô). Chat: `KeyboardChatScrollView` cho danh sách
+  (qua `renderScrollComponent`, xem `components/chat/chat-scroll-view.tsx`) và `KeyboardStickyView` cho thanh nhập.
+  Component của thư viện khác muốn dùng `className` thì đăng ký trong `lib/nativewind-interop.ts`.
 - Màn hình có **thanh tiêu đề của Stack** và nội dung là `ScrollView` / `FlatList`: luôn đặt
   `contentInsetAdjustmentBehavior="automatic"`. Từ iOS 26 thanh tiêu đề nổi đè lên nội dung; thiếu prop này thì
   phần đầu màn hình bị che (React Native mặc định là `"never"`).

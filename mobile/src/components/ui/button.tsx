@@ -1,4 +1,6 @@
-import { ActivityIndicator, Pressable, Text, type PressableProps } from 'react-native';
+import { ActivityIndicator, Pressable, type PressableProps } from 'react-native';
+import { COLORS } from '@/constants/theme';
+import { Text } from './text';
 
 type Variant = 'primary' | 'outline';
 
@@ -10,7 +12,7 @@ type ButtonProps = Omit<PressableProps, 'children'> & {
 };
 
 const CONTAINER: Record<Variant, string> = {
-  primary: 'bg-brand active:bg-brand-700',
+  primary: 'bg-brand active:bg-brand-600',
   outline: 'border border-brand bg-white active:bg-brand-50',
 };
 
@@ -32,13 +34,21 @@ export function Button({
     <Pressable
       accessibilityRole="button"
       disabled={isDisabled}
-      className={`h-12 flex-row items-center justify-center rounded-xl px-5 ${CONTAINER[variant]} ${isDisabled ? 'opacity-50' : ''} ${className}`}
+      // min-h (not h): a label too long for the width wraps to a second line
+      // and the button grows, instead of the text overflowing off-center.
+      className={`min-h-14 flex-row items-center justify-center rounded-2xl px-5 py-3 ${CONTAINER[variant]} ${isDisabled ? 'opacity-50' : ''} ${className}`}
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? '#fff' : '#7C4A2D'} />
+        <ActivityIndicator color={variant === 'primary' ? COLORS.white : COLORS.brand} />
       ) : (
-        <Text className={`text-base font-semibold ${LABEL[variant]}`}>{title}</Text>
+        // shrink lets the text wrap inside the row; text-center centers each line.
+        <Text
+          numberOfLines={2}
+          className={`shrink text-center text-base font-semibold ${LABEL[variant]}`}
+        >
+          {title}
+        </Text>
       )}
     </Pressable>
   );

@@ -1,25 +1,30 @@
-import { Pressable, Text } from 'react-native';
+import { Pressable } from 'react-native';
+import { Text } from './text';
 
 type ChipProps = {
   label: string;
   selected: boolean;
   disabled?: boolean;
   onPress: () => void;
+  className?: string;
 };
 
-/** A selectable pill, used for options (size, sugar, topping) and for choosing a store. */
-export function Chip({ label, selected, disabled, onPress }: ChipProps) {
+/**
+ * A selectable box, used for options (size, sugar, topping) and for choosing a store.
+ * Styled like the S / M / L size picker of the design.
+ */
+export function Chip({ label, selected, disabled, onPress, className = '' }: ChipProps) {
   return (
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected, disabled }}
       disabled={disabled}
       onPress={onPress}
-      className={`rounded-full border px-4 py-2 ${
-        selected ? 'border-brand bg-brand' : 'border-stone-300 bg-white active:bg-stone-100'
-      } ${disabled ? 'opacity-40' : ''}`}
+      className={`min-h-[41px] items-center justify-center rounded-xl border px-4 py-2 ${
+        selected ? 'border-brand bg-brand-50' : 'border-line bg-white active:bg-surface'
+      } ${disabled ? 'opacity-40' : ''} ${className}`}
     >
-      <Text className={selected ? 'font-semibold text-white' : 'text-stone-800'}>{label}</Text>
+      <Text className={`text-center text-sm ${selected ? 'text-brand' : 'text-ink'}`}>{label}</Text>
     </Pressable>
   );
 }

@@ -9,4 +9,11 @@ export const queryKeys = {
   stores: ['stores'] as const,
   orders: ['orders'] as const,
   order: (id: string) => ['order', id] as const,
+  chatSummary: ['chat', 'summary'] as const,
+  chatMessages: ['chat', 'messages'] as const,
+  // Staff screens. Everything under ['admin'] is refetched after a reconnect.
+  staffOrders: ['admin', 'orders'] as const,
+  staffOrder: (id: string) => ['admin', 'order', id] as const,
+  staffConversations: ['admin', 'conversations'] as const,
+  staffMessages: (conversationId: string) => ['admin', 'messages', conversationId] as const,
 };

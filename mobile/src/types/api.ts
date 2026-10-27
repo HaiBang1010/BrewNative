@@ -163,6 +163,9 @@ export type CreateOrderInput = {
   items: { productId: string; quantity: number; optionIds: string[] }[];
 };
 
+/** An order as staff see it (GET /admin/orders): includes the customer. */
+export type StaffOrder = Order & { user: User };
+
 export type Paginated<T> = {
   items: T[];
   total: number;

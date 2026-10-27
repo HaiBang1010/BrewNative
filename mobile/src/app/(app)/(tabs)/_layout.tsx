@@ -1,24 +1,20 @@
-import { Ionicons } from "@react-native-vector-icons/ionicons";
-import { Tabs } from "expo-router";
+import { Tabs } from "expo-router/js-tabs";
 import { CartButton } from "@/components/cart-button";
-import type { ComponentProps } from "react";
-
-type IconProps = ComponentProps<typeof Ionicons>;
-
-function tabIcon(name: IconProps["name"]) {
-  return ({ color, size }: { color: IconProps["color"]; size: number }) => (
-    <Ionicons name={name} color={color} size={size} />
-  );
-}
+import { FloatingTabBar, tabBarIcon } from "@/components/floating-tab-bar";
+import { COLORS, FONTS } from "@/constants/theme";
 
 export default function TabsLayout() {
   return (
     <Tabs
+      tabBar={(props) => <FloatingTabBar {...props} />}
       screenOptions={{
-        tabBarActiveTintColor: "#7C4A2D",
-        tabBarInactiveTintColor: "#a8a29e",
+        tabBarActiveTintColor: COLORS.brand,
+        tabBarInactiveTintColor: COLORS.inkMuted,
         headerShadowVisible: false,
-        sceneStyle: { backgroundColor: "#fafaf9" },
+        headerStyle: { backgroundColor: COLORS.surface },
+        headerTitleStyle: { fontFamily: FONTS.semibold, fontSize: 16, color: COLORS.ink },
+        headerTitleAlign: "center",
+        sceneStyle: { backgroundColor: COLORS.surface },
       }}
     >
       <Tabs.Screen
@@ -26,24 +22,24 @@ export default function TabsLayout() {
         options={{
           title: "Trang chủ",
           headerShown: false,
-          tabBarIcon: tabIcon("home-outline"),
+          tabBarIcon: tabBarIcon("home"),
         }}
       />
       <Tabs.Screen
         name="menu"
         options={{
           title: "Menu",
-          tabBarIcon: tabIcon("cafe-outline"),
+          tabBarIcon: tabBarIcon("cafe"),
           headerRight: () => <CartButton />,
         }}
       />
       <Tabs.Screen
         name="orders"
-        options={{ title: "Đơn hàng", tabBarIcon: tabIcon("receipt-outline") }}
+        options={{ title: "Đơn hàng", tabBarIcon: tabBarIcon("receipt") }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ title: "Tài khoản", tabBarIcon: tabIcon("person-outline") }}
+        options={{ title: "Tài khoản", tabBarIcon: tabBarIcon("person") }}
       />
     </Tabs>
   );

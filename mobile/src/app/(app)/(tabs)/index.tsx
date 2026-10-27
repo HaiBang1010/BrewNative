@@ -1,9 +1,22 @@
-import { Link } from 'expo-router';
-import { Pressable, ScrollView, Text, View } from 'react-native';
+import { Ionicons } from '@react-native-vector-icons/ionicons';
+import { useBottomTabBarHeight } from 'expo-router/js-tabs';
+import { useMemo, useState } from 'react';
+import { FlatList, RefreshControl, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button } from '@/components/ui/button';
-import { useMe } from '@/hooks/queries';
-import { useCartCount } from '@/stores/cart';
+import { CartButton } from '@/components/cart-button';
+import { ALL_CATEGORIES, CategoryChips } from '@/components/menu/category-chips';
+import { ProductCard } from '@/components/menu/product-card';
+import { PromoBanner } from '@/components/menu/promo-banner';
+import { EmptyView, ErrorView, LoadingView } from '@/components/ui/screen-state';
+import { Text } from '@/components/ui/text';
+import { COLORS } from '@/constants/theme';
+import { useMe, useMenu, useStores } from '@/hooks/queries';
+import { useLightStatusBar } from '@/hooks/status-bar';
+import { useCart } from '@/stores/cart';
+import { matchesSearch } from '@/utils/search';
+
+/** How far the dark header reaches into the banner (half of its 140px). */
+const BANNER_OVERLAP = 70;
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -14,42 +27,124 @@ function greeting(): string {
 }
 
 export default function HomeScreen() {
+  useLightStatusBar();
   const insets = useSafeAreaInsets();
+  const tabBarHeight = useBottomTabBarHeight();
   const { data: me } = useMe();
+  const { data: menu, error, isPending, isRefetching, refetch } = useMenu();
+  const { data: stores } = useStores();
+  const storeId = useCart((state) => state.storeId);
+  const [category, setCategory] = useState(ALL_CATEGORIES);
+  const [query, setQuery] = useState('');
+
+  const categories = useMemo(
+    () => (menu ?? []).filter((c) => c.products.length > 0),
+    [menu],
+  );
+  const products = useMemo(() => {
+    return categories
+      .filter((c) => category === ALL_CATEGORIES || c.id === category)
+      .flatMap((c) => c.products)
+      .filter((p) => matchesSearch(p.name, query));
+  }, [categories, category, query]);
+
+  if (isPending) return <LoadingView />;
+  if (error) return <ErrorView error={error} onRetry={refetch} />;
+
+  // The store picked in the cart, or the first one until the customer picks.
+  const store = stores?.find((s) => s.id === storeId) ?? stores?.[0];
   const firstName = me?.fullName.split(' ').at(-1);
-  const cartCount = useCartCount();
+
+  const header = (
+    <View className="gap-6 pb-1">
+      <View
+        className="gap-6 px-6"
+        style={{
+          paddingTop: insets.top + 24,
+          paddingBottom: BANNER_OVERLAP,
+          backgroundImage: 'linear-gradient(233deg, #111111 0%, #313131 100%)',
+        }}
+      >
+        {/* Same dark color above the content, seen when pulling to refresh. */}
+        <View className="absolute inset-x-0 -top-[1000px] h-[1000px] bg-night-deep" />
+
+        <View className="gap-2">
+          <Text className="text-xs tracking-wide text-ink-muted">
+            {greeting()}
+            {firstName ? `, ${firstName}` : ''} · Nhận tại
+          </Text>
+          <View className="flex-row items-center gap-1">
+            <Ionicons name="location-outline" size={14} color={COLORS.brand} />
+            <Text className="shrink text-sm font-semibold text-[#D8D8D8]" numberOfLines={1}>
+              {store?.name ?? 'Đang tải cửa hàng…'}
+            </Text>
+          </View>
+        </View>
+
+        <View className="flex-row items-center gap-4">
+          <View className="h-[52px] flex-1 flex-row items-center gap-2 rounded-xl bg-night-raised px-4">
+            <Ionicons name="search-outline" size={20} color={COLORS.white} />
+            <TextInput
+              value={query}
+              onChangeText={setQuery}
+              placeholder="Tìm món"
+              placeholderTextColor={COLORS.inkMuted}
+              returnKeyType="search"
+              autoCorrect={false}
+              className="h-full flex-1 font-sora text-sm text-white"
+            />
+            {query ? (
+              <Ionicons
+                name="close-circle"
+                size={18}
+                color={COLORS.inkMuted}
+                onPress={() => setQuery('')}
+                accessibilityLabel="Xóa tìm kiếm"
+              />
+            ) : null}
+          </View>
+          <CartButton variant="tile" />
+        </View>
+      </View>
+
+      <View className="px-6" style={{ marginTop: -BANNER_OVERLAP }}>
+        <PromoBanner />
+      </View>
+
+      <CategoryChips categories={categories} selected={category} onSelect={setCategory} />
+    </View>
+  );
 
   return (
-    <ScrollView
-      contentContainerClassName="gap-6 px-5 pb-8"
-      contentContainerStyle={{ paddingTop: insets.top + 16 }}
-    >
-      <View>
-        <Text className="text-base text-stone-500">
-          {greeting()}
-          {firstName ? `, ${firstName}` : ''} 👋
-        </Text>
-        <Text className="text-3xl font-extrabold text-stone-900">Hôm nay uống gì?</Text>
-      </View>
-
-      <View className="gap-3 rounded-3xl bg-brand p-6">
-        <Text className="text-lg font-bold text-white">Đặt trước, khỏi xếp hàng</Text>
-        <Text className="text-brand-100">
-          Chọn món, thanh toán trong app, quán báo khi đồ uống sẵn sàng.
-        </Text>
-        <Link href="/menu" asChild>
-          <Pressable className="self-start rounded-full bg-white px-4 py-2 active:opacity-80">
-            <Text className="font-semibold text-brand">Xem menu</Text>
-          </Pressable>
-        </Link>
-      </View>
-
-      <Link href="/cart" asChild>
-        <Button
-          title={cartCount > 0 ? `Giỏ hàng (${cartCount} món)` : 'Mở giỏ hàng'}
-          variant="outline"
+    <FlatList
+      data={products}
+      keyExtractor={(product) => product.id}
+      numColumns={2}
+      // Long lists: the header with the search field must stay mounted while typing.
+      ListHeaderComponent={header}
+      columnWrapperStyle={{ gap: 15, paddingHorizontal: 24 }}
+      contentContainerStyle={{ gap: 15, paddingBottom: tabBarHeight + 16 }}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefetching}
+          onRefresh={() => void refetch()}
+          tintColor={COLORS.white}
         />
-      </Link>
-    </ScrollView>
+      }
+      ListEmptyComponent={
+        <EmptyView text={query ? 'Không tìm thấy món nào' : 'Menu đang trống'} />
+      }
+      renderItem={({ item, index }) => (
+        <>
+          <ProductCard product={item} />
+          {/* Keep the last card half-width when the count is odd. */}
+          {index === products.length - 1 && products.length % 2 === 1 ? (
+            <View className="flex-1" />
+          ) : null}
+        </>
+      )}
+    />
   );
 }

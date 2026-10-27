@@ -14,6 +14,9 @@ import { cartItemKey } from '@/utils/cart-pricing';
 export const MAX_QUANTITY = 50;
 export const MAX_LINES = 50;
 
+/** What can change on a cart line when the menu changes (the key stays the same). */
+export type CartLineUpdate = Pick<CartItem, 'unitPrice' | 'name' | 'imageUrl' | 'options'>;
+
 type CartState = {
   items: CartItem[];
   storeId: string | null;
@@ -21,6 +24,8 @@ type CartState = {
   add: (item: Omit<CartItem, 'key'>) => void;
   setQuantity: (key: string, quantity: number) => void;
   remove: (key: string) => void;
+  /** Replaces the saved price, name, image and option names with the menu's current ones. */
+  refreshLines: (updates: Record<string, CartLineUpdate>) => void;
   setStoreId: (storeId: string) => void;
   setNote: (note: string) => void;
   /** After placing an order. Keeps the chosen store for next time. */
@@ -75,6 +80,10 @@ export const useCart = create<CartState>()(
         })),
 
       remove: (key) => set((state) => ({ items: state.items.filter((i) => i.key !== key) })),
+      refreshLines: (updates) =>
+        set((state) => ({
+          items: state.items.map((i) => (updates[i.key] ? { ...i, ...updates[i.key] } : i)),
+        })),
       setStoreId: (storeId) => set({ storeId }),
       setNote: (note) => set({ note }),
       clear: () => set({ items: [], note: '' }),

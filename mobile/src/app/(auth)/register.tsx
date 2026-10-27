@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { KeyboardAvoidingView, Platform, ScrollView, Text } from 'react-native';
+import { KeyboardAwareScrollView, KeyboardToolbar } from 'react-native-keyboard-controller';
 import { Button } from '@/components/ui/button';
+import { Text } from '@/components/ui/text';
 import { TextField } from '@/components/ui/text-field';
 import { useAuth } from '@/lib/auth-provider';
 import { errorMessage } from '@/utils/errors';
@@ -32,23 +33,16 @@ export default function RegisterScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      className="flex-1"
-    >
-      <ScrollView
+    <>
+      <KeyboardAwareScrollView
+        bottomOffset={24}
         // iOS 26+: the native header floats over the content. "automatic" makes
         // iOS inset the content below the header (React Native defaults to "never").
         contentInsetAdjustmentBehavior="automatic"
         contentContainerClassName="gap-4 px-6 py-6"
         keyboardShouldPersistTaps="handled"
       >
-        <TextField
-          label="Họ tên"
-          value={fullName}
-          onChangeText={setFullName}
-          autoComplete="name"
-        />
+        <TextField label="Họ tên" value={fullName} onChangeText={setFullName} autoComplete="name" />
         <TextField
           label="Email"
           value={email}
@@ -74,7 +68,8 @@ export default function RegisterScreen() {
           disabled={!canSubmit}
           className="mt-2"
         />
-      </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAwareScrollView>
+      <KeyboardToolbar />
+    </>
   );
 }

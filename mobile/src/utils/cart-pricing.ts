@@ -1,5 +1,5 @@
 import type { OptionGroup, ProductDetail } from '@/types/api';
-import type { ChosenOption, Selection } from '@/types/cart';
+import type { CartItem, CartLineCheck, ChosenOption, Selection } from '@/types/cart';
 
 /**
  * Pure helpers for choosing options on the product screen. No React Native
@@ -83,4 +83,46 @@ export function unitPrice(basePrice: number, options: ChosenOption[]): number {
 /** Same product with the same options = same cart line (quantities add up). */
 export function cartItemKey(productId: string, optionIds: string[]): string {
   return [productId, ...[...optionIds].sort()].join('|');
+}
+
+/**
+ * Checks a saved cart line against the product as it is now, with the same rules
+ * the backend applies when the order is created (backend/src/orders/order-pricing.ts).
+ * The cart keeps the price from when the line was added, and it survives closing the
+ * app: in the meantime the shop may have changed a price or run out of something.
+ *
+ * `product` is null when the product no longer exists.
+ */
+export function checkCartItem(item: CartItem, product: ProductDetail | null): CartLineCheck {
+  if (!product) return { ok: false, reason: 'Món này không còn bán' };
+  if (!product.isAvailable) return { ok: false, reason: 'Hết hàng' };
+
+  const chosen = new Set(item.options.map((o) => o.id));
+  const options: ChosenOption[] = [];
+  for (const group of product.optionGroups) {
+    const picked = group.options.filter((o) => chosen.has(o.id));
+    if (picked.length < group.minSelect || picked.length > group.maxSelect) {
+      return { ok: false, reason: 'Tùy chọn đã thay đổi, hãy chọn lại món' };
+    }
+    for (const option of picked) {
+      if (!option.isAvailable) return { ok: false, reason: `${option.name} đã hết` };
+      chosen.delete(option.id);
+      options.push({
+        id: option.id,
+        groupName: group.name,
+        name: option.name,
+        priceDelta: option.priceDelta,
+      });
+    }
+  }
+  // An option that was removed from the product.
+  if (chosen.size) return { ok: false, reason: 'Tùy chọn đã thay đổi, hãy chọn lại món' };
+
+  return {
+    ok: true,
+    unitPrice: unitPrice(product.basePrice, options),
+    name: product.name,
+    imageUrl: product.imageUrl,
+    options,
+  };
 }

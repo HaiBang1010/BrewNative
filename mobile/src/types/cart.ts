@@ -15,8 +15,22 @@ export type CartItem = {
   productId: string;
   name: string;
   imageUrl: string | null;
-  /** Display only; the server recomputes prices. */
+  /**
+   * Price when the line was added, refreshed from the menu when the cart opens
+   * (hooks/cart-check.ts). Display only: the server recomputes prices.
+   */
   unitPrice: number;
   options: ChosenOption[];
   quantity: number;
 };
+
+/**
+ * A cart line checked against the current menu (utils/cart-pricing.ts `checkCartItem`).
+ * `ok`: can be ordered, with today's price. Otherwise `reason` says why not.
+ */
+export type CartLineCheck =
+  | { ok: true; unitPrice: number; name: string; imageUrl: string | null; options: ChosenOption[] }
+  | { ok: false; reason: string };
+
+/** A line whose price changed since it was added, shown to the customer once. */
+export type PriceChange = { name: string; from: number; to: number };

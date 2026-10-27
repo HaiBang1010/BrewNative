@@ -1,13 +1,15 @@
 import { Stack, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { ErrorView, LoadingView } from '@/components/ui/screen-state';
+import { Text } from '@/components/ui/text';
 import { errorMessage } from '@/utils/errors';
 import { ORDER_STATUS_LABEL, formatDateTime, formatVnd } from '@/utils/format';
 import { useConfirmPayment } from '@/hooks/payments';
 import { useOrder } from '@/hooks/queries';
 import type { Order } from '@/types/api';
+import { COLORS } from '@/constants/theme';
 
 /** While a paid order waits for confirmation, how long to keep polling. */
 const POLL_TIMEOUT_MS = 60_000;
@@ -71,7 +73,7 @@ export default function OrderScreen() {
           <RefreshControl
             refreshing={isRefetching && !pollingSince}
             onRefresh={() => void refetch()}
-            tintColor="#7C4A2D"
+            tintColor={COLORS.brand}
           />
         }
       >

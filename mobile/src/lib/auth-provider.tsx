@@ -12,12 +12,17 @@ import { queryKeys } from '@/lib/query-keys';
 import { authService } from '@/services/auth.service';
 import { getGoogleIdToken, signOutOfGoogle } from '@/services/google-sign-in';
 import { onSessionExpired, tokenStore } from '@/services/session';
-import type { AuthResponse } from '@/types/api';
+import type { AuthResponse, UserRole } from '@/types/api';
+import { decodeJwtPayload } from '@/utils/jwt';
 
 type AuthState = {
   /** True until the saved tokens have been read from the keychain at startup. */
   isLoading: boolean;
   isSignedIn: boolean;
+  /** null while signed out. */
+  role: UserRole | null;
+  /** Staff and admins get the shop screens (app/admin) instead of the customer app. */
+  isStaff: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   register: (fullName: string, email: string, password: string) => Promise<void>;
   /** Resolves to false if the user closed Google's account picker. */
@@ -27,22 +32,32 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+/** The role is inside the access token, so it is known at startup without a request. */
+function roleFromToken(accessToken: string | undefined): UserRole | null {
+  if (!accessToken) return null;
+  return decodeJwtPayload<{ role?: UserRole }>(accessToken)?.role ?? null;
+}
+
 /**
  * Holds the signed-in state for the whole app. The API calls themselves live in
  * services/auth.service.ts; this provider decides what they mean for the app
- * (save tokens, fill the cache, switch between the (auth) and (app) screens).
+ * (save tokens, fill the cache, switch between the (auth), (app) and admin screens).
  */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [role, setRole] = useState<UserRole | null>(null);
 
   // Startup: signed in if tokens were saved. No network needed, so the app opens
   // offline too; an expired session is detected on the first API call.
   useEffect(() => {
     tokenStore
       .get()
-      .then((tokens) => setIsSignedIn(!!tokens))
+      .then((tokens) => {
+        setIsSignedIn(!!tokens);
+        setRole(roleFromToken(tokens?.accessToken));
+      })
       .finally(() => setIsLoading(false));
   }, []);
 
@@ -52,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       onSessionExpired(() => {
         queryClient.clear();
         setIsSignedIn(false);
+        setRole(null);
       }),
     [queryClient],
   );
@@ -64,6 +80,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       // The login response already contains the user: no need to fetch /me.
       queryClient.setQueryData(queryKeys.me, response.user);
+      setRole(response.user.role);
       setIsSignedIn(true);
     },
     [queryClient],
@@ -101,11 +118,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await signOutOfGoogle();
     queryClient.clear();
     setIsSignedIn(false);
+    setRole(null);
   }, [queryClient]);
 
+  const isStaff = role === 'staff' || role === 'admin';
   const value = useMemo(
-    () => ({ isLoading, isSignedIn, signIn, register, signInWithGoogle, signOut }),
-    [isLoading, isSignedIn, signIn, register, signInWithGoogle, signOut],
+    () => ({ isLoading, isSignedIn, role, isStaff, signIn, register, signInWithGoogle, signOut }),
+    [isLoading, isSignedIn, role, isStaff, signIn, register, signInWithGoogle, signOut],
   );
 
   return <AuthContext value={value}>{children}</AuthContext>;
