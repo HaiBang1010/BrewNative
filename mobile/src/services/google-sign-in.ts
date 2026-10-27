@@ -18,6 +18,8 @@ let module: GoogleSignInModule | null = null;
 /** Loaded on first use, so merely opening the app in Expo Go doesn't crash. */
 function load(): GoogleSignInModule {
   if (!module) {
+    // require, not import: a static import would load the native module at startup.
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     module = require('@react-native-google-signin/google-signin') as GoogleSignInModule;
     // The ID token's audience is the Web client ID; the backend accepts it
     // because it is listed in GOOGLE_CLIENT_IDS.

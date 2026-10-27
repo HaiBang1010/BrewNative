@@ -34,6 +34,8 @@ module.exports = {
         // Dark header of the home screen and the login screen.
         night: { DEFAULT: '#313131', deep: '#111111', raised: '#2A2A2A', black: '#050505' },
         promo: '#ED5151',
+        // Done steps of the order progress bar.
+        success: '#36C07E',
       },
       // One family per weight, named by each file's PostScript name (see app/_layout.tsx).
       // Don't use these directly: components/ui/text.tsx maps font-semibold etc. to them.

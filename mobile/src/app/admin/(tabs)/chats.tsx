@@ -49,25 +49,25 @@ export default function StaffChatsScreen() {
               <View className="flex-1 gap-0.5">
                 <View className="flex-row items-center justify-between">
                   <Text
-                    className={`text-base text-stone-900 ${unread ? 'font-bold' : 'font-semibold'}`}
+                    className={`text-base text-ink ${unread ? 'font-bold' : 'font-semibold'}`}
                   >
                     {conversation.customer.fullName}
                   </Text>
                   {conversation.lastMessageAt ? (
-                    <Text className="text-xs text-stone-400">
+                    <Text className="text-xs text-ink-muted">
                       {formatDateTime(conversation.lastMessageAt)}
                     </Text>
                   ) : null}
                 </View>
                 <View className="flex-row items-center justify-between gap-2">
                   <Text
-                    className={`flex-1 text-sm ${unread ? 'font-semibold text-stone-900' : 'text-stone-500'}`}
+                    className={`flex-1 text-sm ${unread ? 'font-semibold text-ink' : 'text-ink-muted'}`}
                     numberOfLines={1}
                   >
                     {last ? `${last.senderId === conversation.customerId ? '' : 'Bạn: '}${last.body}` : ''}
                   </Text>
                   {unread ? (
-                    <View className="min-w-5 items-center rounded-full bg-red-600 px-1.5">
+                    <View className="min-w-5 items-center rounded-full bg-promo px-1.5">
                       <Text className="text-xs font-bold text-white">{conversation.unreadCount}</Text>
                     </View>
                   ) : null}

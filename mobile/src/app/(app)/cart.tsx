@@ -15,6 +15,7 @@ import { formatVnd } from "@/utils/format";
 import { useCartCheck } from "@/hooks/cart-check";
 import { usePayOrder } from "@/hooks/payments";
 import { useCancelOrder, useCreateOrder, useStores } from "@/hooks/queries";
+import { usePush } from "@/lib/push-provider";
 import { MAX_QUANTITY, useCart, useCartTotal } from "@/stores/cart";
 import type { CartItem, CartLineCheck, PriceChange } from "@/types/cart";
 
@@ -27,6 +28,7 @@ export default function CartScreen() {
   const cancelOrder = useCancelOrder();
   const payOrder = usePayOrder();
   const cartCheck = useCartCheck();
+  const push = usePush();
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,6 +99,8 @@ export default function CartScreen() {
       }
       // Paid: now it is a real order. `replace` so Back doesn't return to the cart.
       clear();
+      // Now is when "we'll tell you when it's ready" makes sense: ask for notifications.
+      void push.enable();
       router.replace({ pathname: "/orders/[id]", params: { id: order.id } });
     } catch (e) {
       // e.g. an item became unavailable (the server says which) or the card failed.

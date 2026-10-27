@@ -24,13 +24,13 @@ export default function StaffAccountScreen() {
       contentContainerStyle={{ paddingBottom: tabBarHeight + 16 }}
     >
       <View className="items-center gap-1 rounded-3xl bg-white p-6">
-        <Text className="text-xl font-bold text-stone-900">{me.fullName}</Text>
-        <Text className="text-stone-500">{me.email}</Text>
+        <Text className="text-xl font-bold text-ink">{me.fullName}</Text>
+        <Text className="text-ink-muted">{me.email}</Text>
         <Text className="mt-2 rounded-full bg-brand-100 px-3 py-1 text-sm font-semibold text-brand">
           {ROLE_LABEL[me.role]}
         </Text>
       </View>
-      <Text className="text-center text-sm text-stone-500">
+      <Text className="text-center text-sm text-ink-muted">
         Quản lý menu, cửa hàng và tài khoản: dùng trang Swagger của backend (/api/docs).
       </Text>
       <Button

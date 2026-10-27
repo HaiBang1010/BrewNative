@@ -11,6 +11,7 @@ import {
 import { queryKeys } from '@/lib/query-keys';
 import { authService } from '@/services/auth.service';
 import { getGoogleIdToken, signOutOfGoogle } from '@/services/google-sign-in';
+import { notificationsService } from '@/services/notifications';
 import { onSessionExpired, tokenStore } from '@/services/session';
 import type { AuthResponse, UserRole } from '@/types/api';
 import { decodeJwtPayload } from '@/utils/jwt';
@@ -112,7 +113,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Tell the backend to revoke the refresh token. If that fails (offline),
     // still sign out locally: the token expires on its own.
     if (tokens) {
-      await authService.logout(tokens.refreshToken).catch(() => undefined);
+      // With the push token, this device also stops getting this account's notifications.
+      await authService
+        .logout(tokens.refreshToken, notificationsService.currentToken())
+        .catch(() => undefined);
     }
     await tokenStore.set(null);
     await signOutOfGoogle();

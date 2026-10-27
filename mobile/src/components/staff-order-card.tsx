@@ -39,17 +39,17 @@ export function StaffOrderCard({ order }: { order: StaffOrder }) {
       <Link href={{ pathname: '/admin/orders/[id]', params: { id: order.id } }} asChild>
         <Pressable className="gap-1 active:opacity-70">
           <View className="flex-row items-center justify-between">
-            <Text className="text-base font-bold text-stone-900">{order.code}</Text>
-            <Text className="font-semibold text-stone-900">{formatVnd(order.total)}</Text>
+            <Text className="text-base font-bold text-ink">{order.code}</Text>
+            <Text className="font-semibold text-ink">{formatVnd(order.total)}</Text>
           </View>
           <View className="flex-row items-center justify-between">
             <Text className="text-brand">{ORDER_STATUS_LABEL[order.status]}</Text>
-            <Text className="text-sm text-stone-500">{formatDateTime(order.createdAt)}</Text>
+            <Text className="text-sm text-ink-muted">{formatDateTime(order.createdAt)}</Text>
           </View>
-          <Text className="text-sm text-stone-600">
+          <Text className="text-sm text-ink-soft">
             {order.user.fullName} · {order.store.name}
           </Text>
-          <Text className="text-sm text-stone-500" numberOfLines={2}>
+          <Text className="text-sm text-ink-muted" numberOfLines={2}>
             {order.items.map((item) => `${item.quantity}× ${item.productName}`).join(', ')}
           </Text>
           {order.note ? (

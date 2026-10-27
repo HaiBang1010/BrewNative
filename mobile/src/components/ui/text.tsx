@@ -20,15 +20,11 @@ const FAMILY_FOR_WEIGHT: Record<string, string> = {
  * Use it everywhere instead of importing Text from 'react-native'.
  */
 export function Text({ className = '', ...props }: TextProps & { className?: string }) {
-  let family = 'font-sora';
-  const rest = className
-    .split(/\s+/)
-    .filter((name) => {
-      const mapped = FAMILY_FOR_WEIGHT[name];
-      if (mapped) family = mapped;
-      return !mapped;
-    })
-    .join(' ');
+  const names = className.split(/\s+/);
+  // The last weight class wins, as in CSS.
+  const weight = names.findLast((name) => name in FAMILY_FOR_WEIGHT);
+  const family = weight ? FAMILY_FOR_WEIGHT[weight] : 'font-sora';
+  const rest = names.filter((name) => !(name in FAMILY_FOR_WEIGHT)).join(' ');
 
   return <RNText className={`${family} ${rest}`} {...props} />;
 }

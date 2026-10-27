@@ -1,4 +1,5 @@
 import { Pressable, ScrollView } from 'react-native';
+import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 
 export const ALL_CATEGORIES = 'all';
@@ -37,5 +38,16 @@ export function CategoryChips({ categories, selected, onSelect }: CategoryChipsP
         );
       })}
     </ScrollView>
+  );
+}
+
+/** While the menu loads. */
+export function CategoryChipsSkeleton() {
+  return (
+    <SkeletonGroup className="flex-row gap-4 px-6">
+      {[64, 72, 48, 80].map((width) => (
+        <Skeleton key={width} className="h-[30px] rounded-md" style={{ width }} />
+      ))}
+    </SkeletonGroup>
   );
 }

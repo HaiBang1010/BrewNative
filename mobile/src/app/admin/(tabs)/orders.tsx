@@ -3,7 +3,8 @@ import { useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { StaffOrderCard } from '@/components/staff-order-card';
 import { Chip } from '@/components/ui/chip';
-import { EmptyView, ErrorView, LoadingView } from '@/components/ui/screen-state';
+import { OrderListSkeleton } from '@/components/order-list-skeleton';
+import { EmptyView, ErrorView } from '@/components/ui/screen-state';
 import { useStaffOrders } from '@/hooks/staff';
 import type { OrderStatus } from '@/types/api';
 import { STAFF_ORDER_TABS, type StaffOrderTab } from '@/utils/staff-orders';
@@ -15,7 +16,7 @@ export default function StaffOrdersScreen() {
   const [tab, setTab] = useState<StaffOrderTab>('new');
   const tabBarHeight = useBottomTabBarHeight();
 
-  if (isPending) return <LoadingView />;
+  if (isPending) return <OrderListSkeleton withActions />;
   if (error) return <ErrorView error={error} onRetry={refetch} />;
 
   const countFor = (statuses: readonly OrderStatus[]) =>

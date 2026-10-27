@@ -1,7 +1,7 @@
 import { createMMKV } from 'react-native-mmkv';
 import { create } from 'zustand';
 import { createJSONStorage, persist, type StateStorage } from 'zustand/middleware';
-import type { CartItem } from '@/types/cart';
+import type { CartItem, PriceChange } from '@/types/cart';
 import { cartItemKey } from '@/utils/cart-pricing';
 
 /**
@@ -21,11 +21,17 @@ type CartState = {
   items: CartItem[];
   storeId: string | null;
   note: string;
+  /** Prices that changed in the last refreshLines(), to tell the customer. Not saved. */
+  priceChanges: PriceChange[];
   add: (item: Omit<CartItem, 'key'>) => void;
   setQuantity: (key: string, quantity: number) => void;
   remove: (key: string) => void;
-  /** Replaces the saved price, name, image and option names with the menu's current ones. */
+  /**
+   * Replaces the saved price, name, image and option names with the menu's current
+   * ones, and adds the lines whose price changed to `priceChanges`.
+   */
   refreshLines: (updates: Record<string, CartLineUpdate>) => void;
+  dismissPriceChanges: () => void;
   setStoreId: (storeId: string) => void;
   setNote: (note: string) => void;
   /** After placing an order. Keeps the chosen store for next time. */
@@ -50,6 +56,7 @@ export const useCart = create<CartState>()(
       items: [],
       storeId: null,
       note: '',
+      priceChanges: [],
 
       add: (item) =>
         set((state) => {
@@ -83,10 +90,17 @@ export const useCart = create<CartState>()(
       refreshLines: (updates) =>
         set((state) => ({
           items: state.items.map((i) => (updates[i.key] ? { ...i, ...updates[i.key] } : i)),
+          priceChanges: [
+            ...state.priceChanges,
+            ...state.items
+              .filter((i) => updates[i.key] && updates[i.key].unitPrice !== i.unitPrice)
+              .map((i) => ({ name: updates[i.key].name, from: i.unitPrice, to: updates[i.key].unitPrice })),
+          ],
         })),
+      dismissPriceChanges: () => set({ priceChanges: [] }),
       setStoreId: (storeId) => set({ storeId }),
       setNote: (note) => set({ note }),
-      clear: () => set({ items: [], note: '' }),
+      clear: () => set({ items: [], note: '', priceChanges: [] }),
     }),
     {
       name: 'cart',

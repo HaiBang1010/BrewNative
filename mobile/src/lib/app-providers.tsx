@@ -5,13 +5,14 @@ import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { queryClient, useRefetchOnAppFocus } from '@/lib/query-client';
 import { STRIPE_PUBLISHABLE_KEY, STRIPE_URL_SCHEME } from '@/lib/stripe';
 import { AuthProvider } from './auth-provider';
+import { PushProvider } from './push-provider';
 import { SocketProvider } from './socket-provider';
 
 /**
  * Every app-wide provider, in the order they depend on each other
  * (AuthProvider uses the query cache, so it sits inside QueryClientProvider;
- * SocketProvider needs the signed-in state, so it sits inside AuthProvider).
- * New providers (WebSocket, notifications...) are added here, not in the root layout.
+ * SocketProvider and PushProvider need the signed-in state, so they sit inside AuthProvider).
+ * New providers are added here, not in the root layout.
  */
 export function AppProviders({ children }: { children: ReactNode }) {
   useRefetchOnAppFocus();
@@ -23,8 +24,10 @@ export function AppProviders({ children }: { children: ReactNode }) {
         {/* Publishable key (pk_...) is public; the secret key stays on the backend. */}
         <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY} urlScheme={STRIPE_URL_SCHEME}>
           <AuthProvider>
-            {/* Needs the signed-in state, so it sits inside AuthProvider. */}
-            <SocketProvider>{children}</SocketProvider>
+            {/* Both need the signed-in state, so they sit inside AuthProvider. */}
+            <SocketProvider>
+              <PushProvider>{children}</PushProvider>
+            </SocketProvider>
           </AuthProvider>
         </StripeProvider>
       </QueryClientProvider>

@@ -2,6 +2,7 @@ import { Ionicons } from '@react-native-vector-icons/ionicons';
 import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { Pressable, View } from 'react-native';
+import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { COLORS } from '@/constants/theme';
 import type { Product } from '@/types/api';
@@ -55,5 +56,38 @@ export function ProductCard({ product }: { product: Product }) {
         </View>
       </Pressable>
     </Link>
+  );
+}
+
+/** Same size as ProductCard. Use inside a SkeletonGroup. */
+export function ProductCardSkeleton() {
+  return (
+    <View className="flex-1 gap-2 rounded-2xl bg-white px-2 pb-3 pt-2">
+      <Skeleton className="h-32 rounded-xl" />
+      <View className="gap-2 px-1">
+        <View className="gap-1.5">
+          <Skeleton className="h-4 w-3/4 rounded" />
+          <Skeleton className="h-3 w-1/2 rounded" />
+        </View>
+        <View className="flex-row items-center justify-between">
+          <Skeleton className="h-5 w-20 rounded" />
+          <Skeleton className="h-8 w-8 rounded-lg" />
+        </View>
+      </View>
+    </View>
+  );
+}
+
+/** First load of the menu grid: `rows` rows of two cards. */
+export function ProductGridSkeleton({ rows = 3 }: { rows?: number }) {
+  return (
+    <SkeletonGroup className="gap-[15px] px-6">
+      {Array.from({ length: rows }, (_, i) => (
+        <View key={i} className="flex-row gap-[15px]">
+          <ProductCardSkeleton />
+          <ProductCardSkeleton />
+        </View>
+      ))}
+    </SkeletonGroup>
   );
 }

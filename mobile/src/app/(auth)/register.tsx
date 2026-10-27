@@ -60,7 +60,7 @@ export default function RegisterScreen() {
           autoComplete="new-password"
           error={passwordError}
         />
-        {error ? <Text className="text-center text-red-600">{error}</Text> : null}
+        {error ? <Text className="text-center text-red-500">{error}</Text> : null}
         <Button
           title="Tạo tài khoản"
           onPress={submit}

@@ -51,6 +51,13 @@
             "useFrameworks": "dynamic"
           }
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#C67C4E",
+          "defaultChannel": "default"
+        }
       ]
     ],
     "experiments": {

@@ -20,7 +20,14 @@ export const authService = {
   loginWithGoogle: (idToken: string) =>
     api.post<AuthResponse>('/auth/google', { idToken, deviceName }, { auth: false }),
 
-  /** Revokes the refresh token on the backend. */
-  logout: (refreshToken: string) =>
-    api.post<void>('/auth/logout', { refreshToken }, { auth: false }),
+  /**
+   * Revokes the refresh token on the backend. With `pushToken`, this device also
+   * stops receiving that account's push notifications.
+   */
+  logout: (refreshToken: string, pushToken?: string | null) =>
+    api.post<void>(
+      '/auth/logout',
+      { refreshToken, pushToken: pushToken ?? undefined },
+      { auth: false },
+    ),
 };

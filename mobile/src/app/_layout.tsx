@@ -11,6 +11,7 @@ import {
 } from '@expo-google-fonts/sora';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useEffect } from 'react';
 import { AppProviders } from '@/lib/app-providers';
 import { useAuth } from '@/lib/auth-provider';
 
@@ -52,8 +53,12 @@ export default function RootLayout() {
 function RootNavigator() {
   const { isLoading, isSignedIn, isStaff } = useAuth();
 
+  // A side effect, so not in the render itself: once the first real screen has been rendered.
+  useEffect(() => {
+    if (!isLoading) SplashScreen.hide();
+  }, [isLoading]);
+
   if (isLoading) return null;
-  SplashScreen.hide();
 
   const home = !isSignedIn ? '/login' : isStaff ? '/admin/orders' : '/';
 

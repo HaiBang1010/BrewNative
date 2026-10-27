@@ -42,36 +42,36 @@ export default function StaffOrderScreen() {
         </View>
 
         <View className="gap-1 rounded-2xl bg-white p-5">
-          <Text className="text-base font-semibold text-stone-900">{order.user.fullName}</Text>
-          <Text className="text-stone-500">{order.user.email}</Text>
-          {order.user.phone ? <Text className="text-stone-500">{order.user.phone}</Text> : null}
+          <Text className="text-base font-semibold text-ink">{order.user.fullName}</Text>
+          <Text className="text-ink-muted">{order.user.email}</Text>
+          {order.user.phone ? <Text className="text-ink-muted">{order.user.phone}</Text> : null}
         </View>
 
         <View className="gap-3 rounded-2xl bg-white p-5">
           {order.items.map((item) => (
             <View key={item.id} className="flex-row justify-between gap-4">
               <View className="flex-1">
-                <Text className="text-base font-semibold text-stone-900">
+                <Text className="text-base font-semibold text-ink">
                   {item.quantity}× {item.productName}
                 </Text>
                 {item.options?.length ? (
-                  <Text className="text-stone-600">
+                  <Text className="text-ink-soft">
                     {item.options.map((o) => `${o.groupName}: ${o.optionName}`).join(' · ')}
                   </Text>
                 ) : null}
               </View>
-              <Text className="text-stone-900">{formatVnd(item.lineTotal)}</Text>
+              <Text className="text-ink">{formatVnd(item.lineTotal)}</Text>
             </View>
           ))}
           {order.note ? (
             <Text className="rounded-xl bg-amber-50 p-3 text-amber-800">Ghi chú: {order.note}</Text>
           ) : null}
-          <View className="flex-row justify-between border-t border-stone-200 pt-3">
-            <Text className="text-base font-semibold text-stone-900">Tổng</Text>
-            <Text className="text-base font-semibold text-stone-900">{formatVnd(order.total)}</Text>
+          <View className="flex-row justify-between border-t border-line pt-3">
+            <Text className="text-base font-semibold text-ink">Tổng</Text>
+            <Text className="text-base font-semibold text-ink">{formatVnd(order.total)}</Text>
           </View>
           {payment ? (
-            <Text className="text-sm text-stone-500">
+            <Text className="text-sm text-ink-muted">
               Stripe: {payment.status}
               {payment.amountRefunded ? ` · đã hoàn ${formatVnd(payment.amountRefunded)}` : ''}
             </Text>
@@ -82,8 +82,8 @@ export default function StaffOrderScreen() {
           <View className="gap-2 rounded-2xl bg-white p-5">
             {order.statusHistory.map((entry) => (
               <View key={entry.id} className="flex-row justify-between">
-                <Text className="text-stone-700">{ORDER_STATUS_LABEL[entry.toStatus]}</Text>
-                <Text className="text-sm text-stone-500">{formatDateTime(entry.createdAt)}</Text>
+                <Text className="text-ink-soft">{ORDER_STATUS_LABEL[entry.toStatus]}</Text>
+                <Text className="text-sm text-ink-muted">{formatDateTime(entry.createdAt)}</Text>
               </View>
             ))}
           </View>

@@ -1,10 +1,10 @@
 import { useQueries } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { queryKeys } from '@/lib/query-keys';
 import { menuService } from '@/services/menu.service';
 import { useCart, type CartLineUpdate } from '@/stores/cart';
 import type { ProductDetail } from '@/types/api';
-import type { CartLineCheck, ChosenOption, PriceChange } from '@/types/cart';
+import type { CartLineCheck, ChosenOption } from '@/types/cart';
 import { ApiError } from '@/utils/api-error';
 import { checkCartItem } from '@/utils/cart-pricing';
 
@@ -16,13 +16,14 @@ const sameOptions = (a: ChosenOption[], b: ChosenOption[]) => JSON.stringify(a) 
  * Loads the detail of each product in the cart (the menu list has no options or
  * option prices), always fresh when the cart opens. Then:
  * - lines that can't be ordered any more get a `reason` ("Hết hàng"...);
- * - lines whose price, name or image changed are updated in the cart, and each
- *   price change is returned once in `priceChanges` so the screen can tell the customer.
+ * - lines whose price, name or image changed are updated in the cart, and the
+ *   price changes are listed in `priceChanges` so the screen can tell the customer.
  */
 export function useCartCheck() {
   const items = useCart((state) => state.items);
   const refreshLines = useCart((state) => state.refreshLines);
-  const [priceChanges, setPriceChanges] = useState<PriceChange[]>([]);
+  const priceChanges = useCart((state) => state.priceChanges);
+  const dismissPriceChanges = useCart((state) => state.dismissPriceChanges);
 
   const productIds = useMemo(() => [...new Set(items.map((i) => i.productId))], [items]);
   const products = useQueries({
@@ -58,9 +59,9 @@ export function useCartCheck() {
   }, [items, products.byId]);
 
   // Save today's prices into the cart (so the total, the badge and the next visit agree).
+  // The store also records which prices changed, for the notice.
   useEffect(() => {
     const updates: Record<string, CartLineUpdate> = {};
-    const changes: PriceChange[] = [];
     for (const item of items) {
       const check = checks.get(item.key);
       if (!check?.ok) continue;
@@ -73,11 +74,7 @@ export function useCartCheck() {
         const { unitPrice, name, imageUrl, options } = check;
         updates[item.key] = { unitPrice, name, imageUrl, options };
       }
-      if (check.unitPrice !== item.unitPrice) {
-        changes.push({ name: check.name, from: item.unitPrice, to: check.unitPrice });
-      }
     }
-    if (changes.length) setPriceChanges((prev) => [...prev, ...changes]);
     if (Object.keys(updates).length) refreshLines(updates);
   }, [checks, items, refreshLines]);
 
@@ -90,7 +87,7 @@ export function useCartCheck() {
     /** Lines that can't be ordered; paying is disabled until they're removed. */
     blockedCount: blocked.length,
     priceChanges,
-    dismissPriceChanges: () => setPriceChanges([]),
+    dismissPriceChanges,
     refetch: products.refetch,
   };
 }

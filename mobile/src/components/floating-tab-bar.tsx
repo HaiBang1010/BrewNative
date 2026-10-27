@@ -16,9 +16,10 @@ type IconName = IconProps["name"];
 
 /** `tabBarIcon` option: the filled Ionicon for the selected tab, its `-outline` twin for the others. */
 export function tabBarIcon(name: IconName) {
-  return ({ color, size, focused }: { color: IconProps["color"]; size: number; focused: boolean }) => (
-    <Ionicons name={focused ? name : (`${name}-outline` as IconName)} color={color} size={size} />
-  );
+  // Named function: React DevTools and error messages show "TabBarIcon".
+  return function TabBarIcon({ color, size, focused }: { color: IconProps["color"]; size: number; focused: boolean }) {
+    return <Ionicons name={focused ? name : (`${name}-outline` as IconName)} color={color} size={size} />;
+  };
 }
 
 /**
@@ -47,7 +48,7 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
       onLayout={(e) => onHeightChange?.(e.nativeEvent.layout.height)}
     >
       <View
-        className="flex-row rounded-full border border-stone-100 bg-white"
+        className="flex-row rounded-full border border-line-light bg-white"
         style={{
           padding: INNER_PADDING,
           shadowColor: COLORS.ink,
@@ -93,7 +94,7 @@ export function FloatingTabBar({ state, descriptors, emitter, navigateToTab, ins
               <View>
                 {options.tabBarIcon?.({ focused, color, size: 24 })}
                 {options.tabBarBadge != null ? (
-                  <View className="absolute -right-2.5 -top-1 h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-red-600 px-1">
+                  <View className="absolute -right-2.5 -top-1 h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-white bg-promo px-1">
                     <Text className="text-[10px] font-bold leading-3 text-white">
                       {typeof options.tabBarBadge === "number" && options.tabBarBadge > 99
                         ? "99+"

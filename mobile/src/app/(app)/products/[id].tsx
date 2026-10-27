@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { Chip } from '@/components/ui/chip';
 import { QuantityStepper } from '@/components/ui/quantity-stepper';
-import { ErrorView, LoadingView } from '@/components/ui/screen-state';
+import { ErrorView } from '@/components/ui/screen-state';
+import { Skeleton, SkeletonGroup } from '@/components/ui/skeleton';
 import { Text } from '@/components/ui/text';
 import { COLORS } from '@/constants/theme';
 import {
@@ -30,7 +31,7 @@ export default function ProductScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: product, error, isPending, refetch } = useProduct(id);
 
-  if (isPending) return <LoadingView />;
+  if (isPending) return <ProductSkeleton />;
   if (error) return <ErrorView error={error} onRetry={refetch} />;
 
   // `key` resets the form state if the screen is reused for another product.
@@ -177,5 +178,42 @@ function OptionGroupPicker({
         ))}
       </View>
     </View>
+  );
+}
+
+/** Image, name, description and one option group, like the loaded screen. */
+function ProductSkeleton() {
+  return (
+    // Same inset as the loaded ScrollView: starts below the iOS 26+ floating header,
+    // so nothing jumps when the product arrives.
+    <ScrollView
+      contentInsetAdjustmentBehavior="automatic"
+      scrollEnabled={false}
+      contentContainerClassName="px-6 pt-2"
+    >
+      <SkeletonGroup className="gap-5">
+        <Skeleton className="w-full rounded-2xl" style={{ aspectRatio: 327 / 202 }} />
+        <View className="flex-row items-end justify-between">
+          <View className="gap-2">
+            <Skeleton className="h-6 w-40 rounded" />
+            <Skeleton className="h-3 w-20 rounded" />
+          </View>
+          <Skeleton className="h-10 w-32 rounded-full" />
+        </View>
+        <View className="gap-2">
+          <Skeleton className="h-4 w-20 rounded" />
+          <Skeleton className="h-3.5 w-full rounded" />
+          <Skeleton className="h-3.5 w-5/6 rounded" />
+        </View>
+        <View className="gap-4">
+          <Skeleton className="h-4 w-16 rounded" />
+          <View className="flex-row gap-4">
+            <Skeleton className="h-[41px] flex-1 rounded-xl" />
+            <Skeleton className="h-[41px] flex-1 rounded-xl" />
+            <Skeleton className="h-[41px] flex-1 rounded-xl" />
+          </View>
+        </View>
+      </SkeletonGroup>
+    </ScrollView>
   );
 }

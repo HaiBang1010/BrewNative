@@ -4,10 +4,14 @@ import { useMemo, useState } from 'react';
 import { FlatList, RefreshControl, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { CartButton } from '@/components/cart-button';
-import { ALL_CATEGORIES, CategoryChips } from '@/components/menu/category-chips';
-import { ProductCard } from '@/components/menu/product-card';
+import {
+  ALL_CATEGORIES,
+  CategoryChips,
+  CategoryChipsSkeleton,
+} from '@/components/menu/category-chips';
+import { ProductCard, ProductGridSkeleton } from '@/components/menu/product-card';
 import { PromoBanner } from '@/components/menu/promo-banner';
-import { EmptyView, ErrorView, LoadingView } from '@/components/ui/screen-state';
+import { EmptyView, ErrorView } from '@/components/ui/screen-state';
 import { Text } from '@/components/ui/text';
 import { COLORS } from '@/constants/theme';
 import { useMe, useMenu, useStores } from '@/hooks/queries';
@@ -48,8 +52,8 @@ export default function HomeScreen() {
       .filter((p) => matchesSearch(p.name, query));
   }, [categories, category, query]);
 
-  if (isPending) return <LoadingView />;
-  if (error) return <ErrorView error={error} onRetry={refetch} />;
+  // While loading, the header (search, banner) shows right away; chips and grid are skeletons.
+  if (error && !menu) return <ErrorView error={error} onRetry={refetch} />;
 
   // The store picked in the cart, or the first one until the customer picks.
   const store = stores?.find((s) => s.id === storeId) ?? stores?.[0];
@@ -111,7 +115,11 @@ export default function HomeScreen() {
         <PromoBanner />
       </View>
 
-      <CategoryChips categories={categories} selected={category} onSelect={setCategory} />
+      {isPending ? (
+        <CategoryChipsSkeleton />
+      ) : (
+        <CategoryChips categories={categories} selected={category} onSelect={setCategory} />
+      )}
     </View>
   );
 
@@ -134,7 +142,11 @@ export default function HomeScreen() {
         />
       }
       ListEmptyComponent={
-        <EmptyView text={query ? 'Không tìm thấy món nào' : 'Menu đang trống'} />
+        isPending ? (
+          <ProductGridSkeleton />
+        ) : (
+          <EmptyView text={query ? 'Không tìm thấy món nào' : 'Menu đang trống'} />
+        )
       }
       renderItem={({ item, index }) => (
         <>

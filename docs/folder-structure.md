@@ -50,11 +50,13 @@ mobile/
 │   │   ├── chat.service.ts     # /chat; gửi tin qua WebSocket, không trả lời thì gửi qua REST
 │   │   ├── staff.service.ts    # /admin: đơn hàng, đổi trạng thái, chat với khách
 │   │   ├── socket.ts           # Kết nối Socket.IO duy nhất của app
+│   │   ├── notifications.ts    # expo-notifications: xin quyền, push token, bấm vào thông báo
 │   │   └── google-sign-in.ts   # SDK Google Sign-In
 │   ├── lib/                    # Cấu hình thư viện và provider dùng cho cả app
 │   │   ├── app-providers.tsx   # Gom mọi provider; app/_layout.tsx chỉ dùng cái này
 │   │   ├── auth-provider.tsx   # AuthProvider / useAuth: trạng thái đăng nhập
 │   │   ├── socket-provider.tsx # Kết nối WebSocket khi đăng nhập; event của server → cập nhật cache
+│   │   ├── push-provider.tsx   # Đăng ký push token khi đăng nhập; bấm thông báo → mở đơn / chat
 │   │   ├── nativewind-interop.ts # Cho component của thư viện khác dùng được className
 │   │   ├── query-client.ts     # Cấu hình TanStack Query
 │   │   ├── query-keys.ts       # Khóa cache dùng chung
@@ -66,7 +68,8 @@ mobile/
 │   │   ├── auth.ts             # Tokens, TokenStore
 │   │   ├── cart.ts             # CartItem, ChosenOption, Selection
 │   │   ├── payment.ts          # ConfirmResult, PayResult
-│   │   └── realtime.ts         # Event WebSocket, ChatMessage, ChatSummary
+│   │   ├── realtime.ts         # Event WebSocket, ChatMessage, ChatSummary
+│   │   └── notifications.ts    # `data` của push notification backend gửi
 │   ├── utils/                  # Hàm thuần: không React, không gọi mạng
 │   │   ├── api-error.ts        # Lớp ApiError
 │   │   ├── errors.ts           # Đổi lỗi thành câu tiếng Việt
@@ -76,7 +79,9 @@ mobile/
 │   │   ├── uuid.ts             # clientId cho tin nhắn
 │   │   ├── jwt.ts              # Đọc role trong access token (không xác minh; backend mới xác minh)
 │   │   ├── staff-orders.ts     # Nút hành động cho từng trạng thái đơn (khớp quy tắc backend), các tab
-│   │   └── search.ts           # Tìm món không phân biệt dấu ("ca phe" ra "Cà phê")
+│   │   ├── search.ts           # Tìm món không phân biệt dấu ("ca phe" ra "Cà phê")
+│   │   ├── order-progress.ts   # Thanh tiến trình 4 bước và câu mô tả từng trạng thái đơn
+│   │   └── notification-route.ts # Bấm thông báo thì mở màn nào (khách / quán)
 │   ├── constants/
 │   │   └── theme.ts            # COLORS, FONTS cho prop không nhận className (màu icon, tintColor, header)
 │   └── global.css              # Tailwind; import một lần ở app/_layout.tsx
@@ -106,7 +111,7 @@ mobile/
 | `(app)/(tabs)/orders.tsx` | `/orders` | Danh sách đơn |
 | `(app)/(tabs)/profile.tsx` | `/profile` | Tài khoản |
 | `(app)/products/[id].tsx` | `/products/:id` | Chi tiết món |
-| `(app)/orders/[id].tsx` | `/orders/:id` | Theo dõi đơn (push notification mở vào đây) |
+| `(app)/orders/[id].tsx` | `/orders/:id` | Theo dõi đơn: thanh tiến trình, quán (chat), món đã đặt. Push notification mở vào đây |
 | `(app)/cart.tsx` | `/cart` | Giỏ hàng |
 | `(app)/chat.tsx` | `/chat` | Chat với quán |
 | `admin/(tabs)/orders.tsx` | `/admin/orders` | **Quán:** hàng đợi đơn theo trạng thái, nút cho bước tiếp theo |
@@ -119,7 +124,23 @@ mobile/
 Thư mục trong ngoặc như `(auth)`, `(app)`, `(tabs)` là **nhóm**: dùng để gom màn hình và layout, không xuất hiện trong
 đường dẫn. Deep link: `brew://orders/123` (bản build thật) hoặc `exp://<IP>:8081/--/orders/123` (Expo Go).
 
-Các màn hình lấy dữ liệu thật từ backend (`EXPO_PUBLIC_API_URL` trong `.env`). Chưa có: push notification.
+Các màn hình lấy dữ liệu thật từ backend (`EXPO_PUBLIC_API_URL` trong `.env`).
+
+**Push notification** (khi app chạy nền hoặc đã tắt; WebSocket chỉ chạy khi app đang mở). Backend gửi qua Expo Push
+(`backend/src/push`): khách nhận "quán đã nhận đơn", "đồ uống đã sẵn sàng", "đơn bị hủy" và tin chat; quán nhận
+"đơn mới" và tin chat. App (`lib/push-provider.tsx`):
+- Đăng nhập → gửi push token lên `POST /api/me/push-tokens` (gửi lại khi token đổi). Quán được hỏi quyền ngay khi
+  đăng nhập; khách được hỏi ngay sau lần thanh toán đầu, lúc "báo khi đồ uống sẵn sàng" có ý nghĩa.
+- Bấm thông báo → mở màn đơn hoặc chat (`utils/notification-route.ts`).
+- Đăng xuất → gửi token kèm `/auth/logout` để máy này không nhận thông báo của tài khoản cũ nữa.
+
+Cần làm một lần để push chạy được:
+1. `cd mobile && npx eas-cli init`: tạo project trên Expo, ghi `extra.eas.projectId` vào `app.json`
+   (Expo cấp push token theo project). Chưa có thì app bỏ qua bước đăng ký và cảnh báo trong console.
+2. Credentials: iOS cần APNs key (tài khoản Apple Developer trả phí), Android cần FCM V1
+   (`google-services.json` + service account key). Upload bằng `npx eas-cli credentials`.
+3. Build lại app (`npx expo prebuild --clean` rồi `npm run ios` / `npm run android`): expo-notifications là code native.
+4. Thử trên máy thật, simulator iOS (Xcode 14+) hoặc emulator Android có Google Play.
 
 **Realtime:** `lib/socket-provider.tsx` giữ WebSocket kết nối khi đã đăng nhập. Event `order:updated` làm màn đơn và
 danh sách đơn tự tải lại; `message:new` thêm tin vào màn chat; `conversation:read` cập nhật số tin chưa đọc. Token
@@ -141,6 +162,23 @@ trên màn giỏ hàng.
 - Trả xong: app gọi `POST /api/orders/:id/payment/confirm`, xóa giỏ, chuyển sang màn đơn.
 - Đóng PaymentSheet hoặc lỗi: app hủy đơn nháp, **giỏ hàng giữ nguyên**.
 - Đơn nháp (chưa từng được trả) không hiện trong tab Đơn hàng.
+
+### Kiểm tra code
+
+```bash
+cd mobile
+npm test           # Jest (jest-expo): test trong các thư mục __tests__/
+npm run lint       # ESLint (eslint-config-expo), gồm luật React Compiler
+npx tsc --noEmit   # TypeScript
+```
+
+Test đặt cạnh code trong `__tests__/` (ví dụ `utils/__tests__/cart-pricing.test.ts`), **không đặt trong `src/app/`**
+vì Expo Router coi mọi file ở đó là một màn hình. Đang có test cho:
+- `utils/cart-pricing.ts`: chọn tùy chọn, tính giá, kiểm tra dòng trong giỏ;
+- `utils/chat-cache.ts`: tin nhắn đến hai lần không bị trùng;
+- `services/api-client.ts`: với một backend giả **đổi refresh token sau mỗi lần dùng**, nhiều request cùng bị
+  401 chỉ gây ra **một** lần refresh. Nếu refresh chạy song song, refresh token bị dùng lại và backend thật sẽ
+  coi là bị đánh cắp, đăng xuất khách khỏi mọi thiết bị.
 
 ### Quy ước
 

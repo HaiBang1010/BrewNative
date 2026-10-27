@@ -1,7 +1,7 @@
 import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { useFocusEffect } from "expo-router";
 import { useHeaderHeight } from "expo-router/react-navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -84,15 +84,15 @@ export function ChatThread({
     useCallback(() => {
       if (newestId) onRead();
       // Re-run only when a newer message shows up, not when onRead changes identity.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [newestId]),
   );
 
-  // Drop a pending bubble once the server's copy (same clientId) is in the list,
+  // Hide a pending bubble once the server's copy (same clientId) is in the list,
   // whether it arrived via the send's reply or the `message:new` event.
-  useEffect(() => {
-    const confirmed = new Set(stored.map((m) => m.clientId).filter(Boolean));
-    setPending((current) => current.filter((p) => !confirmed.has(p.clientId)));
-  }, [messages.data]);
+  // Derived while rendering, so no extra render; confirmed ones are pruned on the next send.
+  const confirmedIds = new Set(stored.map((m) => m.clientId).filter(Boolean));
+  const unconfirmed = pending.filter((p) => !confirmedIds.has(p.clientId));
 
   function deliver(item: Pending) {
     setSendError(null);
@@ -101,7 +101,11 @@ export function ChatThread({
         ? current.map((p) =>
             p.clientId === item.clientId ? { ...p, failed: false } : p,
           )
-        : [{ ...item, failed: false }, ...current],
+        : // New message: also forget bubbles the server has confirmed since.
+          [
+            { ...item, failed: false },
+            ...current.filter((p) => !confirmedIds.has(p.clientId)),
+          ],
     );
     send(
       { body: item.body, clientId: item.clientId },
@@ -145,7 +149,7 @@ export function ChatThread({
     return <ErrorView error={messages.error} onRetry={messages.refetch} />;
 
   const rows: Row[] = [
-    ...pending.map((p): Row => ({ kind: "pending", pending: p })),
+    ...unconfirmed.map((p): Row => ({ kind: "pending", pending: p })),
     ...stored.map((m): Row => ({ kind: "message", message: m })),
   ];
 
@@ -190,7 +194,7 @@ export function ChatThread({
             style={{ transform: [{ scaleY: -1 }] }}
           >
             <Ionicons name="chatbubbles-outline" size={40} color={COLORS.line} />
-            <Text className="text-center text-stone-500">{emptyText}</Text>
+            <Text className="text-center text-ink-muted">{emptyText}</Text>
           </View>
         }
         renderItem={({ item: row }) =>
@@ -218,10 +222,10 @@ export function ChatThread({
           slides under the keyboard (offset.opened), so the bar sits right on it. */}
       <KeyboardStickyView offset={{ closed: 0, opened: insets.bottom }}>
         {sendError ? (
-          <Text className="px-4 pb-1 text-sm text-red-600">{sendError}</Text>
+          <Text className="px-4 pb-1 text-sm text-red-500">{sendError}</Text>
         ) : null}
         <View
-          className="flex-row items-end gap-2 border-t border-stone-200 bg-white px-3 pt-2"
+          className="flex-row items-end gap-2 border-t border-line bg-white px-3 pt-2"
           style={{ paddingBottom: Math.max(insets.bottom, 8) }}
         >
           <TextInput
@@ -231,7 +235,7 @@ export function ChatThread({
             placeholderTextColor={COLORS.inkMuted}
             multiline
             maxLength={2000}
-            className="max-h-32 flex-1 rounded-2xl bg-stone-100 px-4 py-2.5 text-base text-stone-900"
+            className="max-h-32 flex-1 rounded-2xl bg-line-light px-4 py-2.5 text-base text-ink"
           />
           <Pressable
             accessibilityRole="button"
@@ -240,7 +244,7 @@ export function ChatThread({
             onPress={submit}
             className={`h-11 w-11 items-center justify-center rounded-full bg-brand ${text.trim() ? "" : "opacity-40"}`}
           >
-            <Ionicons name="send" size={18} color="#fff" />
+            <Ionicons name="send" size={18} color={COLORS.white} />
           </Pressable>
         </View>
       </KeyboardStickyView>
@@ -268,23 +272,23 @@ function Bubble({
       className={`max-w-[80%] gap-1 ${mine ? "self-end items-end" : "self-start items-start"}`}
     >
       {!mine && senderName ? (
-        <Text className="px-1 text-xs text-stone-500">{senderName}</Text>
+        <Text className="px-1 text-xs text-ink-muted">{senderName}</Text>
       ) : null}
       <View
         className={`rounded-2xl px-4 py-2.5 ${mine ? "rounded-br-md bg-brand" : "rounded-bl-md bg-white"} ${status === "sending" ? "opacity-60" : ""}`}
       >
-        <Text className={`text-base ${mine ? "text-white" : "text-stone-900"}`}>
+        <Text className={`text-base ${mine ? "text-white" : "text-ink"}`}>
           {body}
         </Text>
       </View>
       {status === "failed" ? (
         <Pressable onPress={onRetry} hitSlop={6}>
-          <Text className="px-1 text-xs text-red-600">
+          <Text className="px-1 text-xs text-red-500">
             Chưa gửi được · Chạm để gửi lại
           </Text>
         </Pressable>
       ) : time ? (
-        <Text className="px-1 text-xs text-stone-400">
+        <Text className="px-1 text-xs text-ink-muted">
           {new Date(time).toLocaleTimeString("vi-VN", {
             hour: "2-digit",
             minute: "2-digit",

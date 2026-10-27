@@ -1,8 +1,15 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+  type UseQueryOptions,
+} from '@tanstack/react-query';
 import { queryKeys } from '@/lib/query-keys';
 import { menuService } from '@/services/menu.service';
 import { orderService } from '@/services/order.service';
 import { userService } from '@/services/user.service';
+import type { Order } from '@/types/api';
 
 /**
  * Screens read and change backend data through these hooks. The hooks add
@@ -50,7 +57,10 @@ export function useOrders() {
   });
 }
 
-export function useOrder(id: string, options?: { refetchInterval?: number | false }) {
+export function useOrder(
+  id: string,
+  options?: Pick<UseQueryOptions<Order, Error, Order, QueryKey>, 'refetchInterval'>,
+) {
   return useQuery({
     queryKey: queryKeys.order(id),
     queryFn: ({ signal }) => orderService.get(id, signal),

@@ -12,9 +12,9 @@ type ComingSoonProps = {
 /** Placeholder body for screens that are only part of the navigation skeleton so far. */
 export function ComingSoon({ title, description, children }: ComingSoonProps) {
   return (
-    <View className="flex-1 items-center justify-center gap-3 bg-stone-50 px-8">
-      <Text className="text-xl font-bold text-stone-900">{title}</Text>
-      <Text className="text-center text-base text-stone-500">{description}</Text>
+    <View className="flex-1 items-center justify-center gap-3 bg-surface px-8">
+      <Text className="text-xl font-bold text-ink">{title}</Text>
+      <Text className="text-center text-base text-ink-muted">{description}</Text>
       {children ? <View className="mt-4 w-full gap-3">{children}</View> : null}
     </View>
   );
