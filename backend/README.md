@@ -82,7 +82,8 @@ Tài khoản Stripe test hiện tại ở Singapore và nhận VND; số tiền 
 | `npm run migration:show` | Xem migration nào đã chạy |
 | `npm run seed` | Thêm dữ liệu mẫu (chạy lại không bị trùng) |
 | `npm test` | Unit test (Vitest) |
-| `npm run test:e2e` | Test e2e, gồm WebSocket và Stripe (cần Postgres; phần Stripe cần key test và mạng, tự bỏ qua nếu thiếu key). Tắt `stripe:listen` và server dev trước khi chạy |
+| `npm run db:test:prepare` | Tạo database `brew_test` riêng cho test và chạy migration (làm lần đầu, và sau mỗi migration mới) |
+| `npm run test:e2e` | Test e2e trên database `brew_test`, gồm WebSocket và Stripe (phần Stripe cần key test và mạng, tự bỏ qua nếu thiếu key). Chạy được cả khi server dev và `stripe:listen` đang bật |
 | `npm run lint` | Lint (oxlint) |
 
 Xóa sạch database để làm lại từ đầu: `docker compose down -v`, rồi `db:up`, `migration:run`, `seed`.

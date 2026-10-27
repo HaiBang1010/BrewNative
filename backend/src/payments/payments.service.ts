@@ -9,6 +9,7 @@ import {
   type OnModuleInit,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectDataSource } from '@nestjs/typeorm';
 import Stripe from 'stripe';
 import { DataSource, In, type EntityManager } from 'typeorm';
@@ -97,6 +98,10 @@ export class PaymentsService implements OnModuleInit {
         if (PAYABLE_STATUSES.includes(latest.status)) {
           return this.toSheetParams(intent);
         }
+        if (latest.status === PaymentStatus.Succeeded) {
+          // Paid, but the order isn't marked yet: the app should call confirm.
+          throw new ConflictException('Payment already received');
+        }
         if (IN_FLIGHT_STATUSES.includes(latest.status)) {
           throw new ConflictException('Payment is already being processed');
         }
@@ -127,6 +132,92 @@ export class PaymentsService implements OnModuleInit {
       });
       return this.toSheetParams(intent);
     });
+  }
+
+  /**
+   * Asks Stripe for the order's latest PaymentIntent and applies it exactly like
+   * the webhook would. The app calls this right after PaymentSheet succeeds, so
+   * the order turns paid without waiting for the webhook, and a missed webhook
+   * (e.g. `npm run stripe:listen` not running) can't leave a paid order stuck.
+   * Safe to call any number of times, and safe to race with the webhook: both
+   * lock the order row and the second one finds it already paid.
+   */
+  async confirmPayment(
+    userId: string,
+    orderId: string,
+  ): Promise<{
+    orderStatus: OrderStatus;
+    paymentStatus: PaymentStatus | null;
+  }> {
+    const stripe = this.requireStripe();
+    const order = await this.dataSource
+      .getRepository(Order)
+      .findOneBy({ id: orderId, userId });
+    if (!order) throw new NotFoundException('Order not found');
+
+    const latest = await this.dataSource.getRepository(Payment).findOne({
+      where: { orderId },
+      order: { createdAt: 'DESC' },
+    });
+    if (!latest) return { orderStatus: order.status, paymentStatus: null };
+
+    // Read from Stripe with the secret key: the app's word isn't trusted.
+    const intent = await this.callStripe(() =>
+      stripe.paymentIntents.retrieve(latest.stripePaymentIntentId),
+    );
+
+    const transitions: TransitionResult[] = [];
+    const orderStatus = await this.dataSource.transaction(async (manager) => {
+      if (intent.status === 'succeeded') {
+        const result = await this.onPaymentSucceeded(manager, intent);
+        if (result) transitions.push(result);
+      } else {
+        await this.syncFromIntent(manager, intent);
+      }
+      return (await manager.findOneByOrFail(Order, { id: orderId })).status;
+    });
+    transitions.forEach((t) => this.orders.afterTransition(t));
+
+    return { orderStatus, paymentStatus: intent.status as PaymentStatus };
+  }
+
+  /**
+   * Safety net for missed webhooks when the app couldn't confirm either (e.g. it
+   * was killed right after paying). Every minute, re-checks unpaid orders whose
+   * latest PaymentIntent is still open with Stripe.
+   */
+  @Cron(CronExpression.EVERY_MINUTE)
+  async reconcilePendingPayments(minAgeSeconds = 60): Promise<number> {
+    if (!this.stripe) return 0;
+    const rows = await this.dataSource
+      .getRepository(Payment)
+      .createQueryBuilder('p')
+      .innerJoin('p.order', 'o')
+      .select('p.orderId', 'orderId')
+      .addSelect('o.userId', 'userId')
+      .distinct(true)
+      .where('o.status = :pending', { pending: OrderStatus.PendingPayment })
+      .andWhere('p.status != :canceled', { canceled: PaymentStatus.Canceled })
+      // Give the app and the webhook a moment first.
+      .andWhere('p.createdAt < now() - make_interval(secs => :age)', {
+        age: minAgeSeconds,
+      })
+      .getRawMany<{ orderId: string; userId: string }>();
+
+    let paid = 0;
+    for (const { orderId, userId } of rows) {
+      try {
+        const { orderStatus } = await this.confirmPayment(userId, orderId);
+        if (orderStatus === OrderStatus.Paid) paid++;
+      } catch (error) {
+        this.logger.warn(
+          `Reconcile failed for order ${orderId}: ${String(error)}`,
+        );
+      }
+    }
+    if (paid)
+      this.logger.log(`Reconciled ${paid} paid order(s) without a webhook`);
+    return paid;
   }
 
   // ---------- Webhook ----------

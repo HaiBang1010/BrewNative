@@ -140,14 +140,31 @@ export class OrdersService {
     return this.getForUser(userId, saved.id);
   }
 
+  /**
+   * The customer's orders, newest first. An order only becomes "real" for the
+   * customer once it is paid: checkouts that were never paid (still waiting, or
+   * abandoned and cancelled) are hidden. Orders cancelled after payment
+   * (refunded) still show.
+   */
   async listForUser(userId: string, query: PaginationQueryDto) {
-    const [items, total] = await this.orders.findAndCount({
-      where: { userId },
-      relations: { store: true, items: true },
-      order: { createdAt: 'DESC' },
-      skip: (query.page - 1) * query.limit,
-      take: query.limit,
-    });
+    const [items, total] = await this.orders
+      .createQueryBuilder('o')
+      .leftJoinAndSelect('o.store', 'store')
+      .leftJoinAndSelect('o.items', 'items')
+      .where('o.userId = :userId', { userId })
+      .andWhere(
+        `(o.status NOT IN (:...unpaid) OR EXISTS (
+          SELECT 1 FROM order_status_history h
+          WHERE h.order_id = o.id AND h.to_status = :paid))`,
+        {
+          unpaid: [OrderStatus.PendingPayment, OrderStatus.Cancelled],
+          paid: OrderStatus.Paid,
+        },
+      )
+      .orderBy('o.createdAt', 'DESC')
+      .skip((query.page - 1) * query.limit)
+      .take(query.limit)
+      .getManyAndCount();
     return paginate(items, total, query);
   }
 

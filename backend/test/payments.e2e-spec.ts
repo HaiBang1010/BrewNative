@@ -8,6 +8,7 @@ import { AppModule } from '../src/app.module.js';
 import { hashPassword } from '../src/common/utils/password.js';
 import { Category } from '../src/menu/entities/category.entity.js';
 import { Order } from '../src/orders/entities/order.entity.js';
+import { PaymentsService } from '../src/payments/payments.service.js';
 import { Store } from '../src/stores/entities/store.entity.js';
 import { UserRole } from '../src/users/entities/user-role.enum.js';
 import { User } from '../src/users/entities/user.entity.js';
@@ -326,6 +327,102 @@ describe.skipIf(!configured)('Payments (e2e, Stripe test mode)', () => {
     expect((await getOrder(order.id)).payments[0].amountRefunded).toBe(
       order.total,
     );
+  }, 30_000);
+
+  it('confirms a paid order without the webhook, idempotently', async () => {
+    const order = await createOrder();
+    const unpaid = (
+      await http()
+        .post(`/api/orders/${order.id}/payment/confirm`)
+        .set(as(customer))
+        .expect(200)
+    ).body;
+    expect(unpaid).toEqual({
+      orderStatus: 'pending_payment',
+      paymentStatus: null,
+    });
+
+    const intent = await payWith(order.id, 'pm_card_visa');
+    // Paying again before confirming is refused with a clear reason.
+    const again = await http()
+      .post(`/api/orders/${order.id}/payment`)
+      .set(as(customer))
+      .expect(409);
+    expect(again.body.message).toBe('Payment already received');
+
+    // No webhook sent: confirm asks Stripe directly.
+    const confirmed = (
+      await http()
+        .post(`/api/orders/${order.id}/payment/confirm`)
+        .set(as(customer))
+        .expect(200)
+    ).body;
+    expect(confirmed).toEqual({
+      orderStatus: 'paid',
+      paymentStatus: 'succeeded',
+    });
+    await http()
+      .post(`/api/orders/${order.id}/payment/confirm`)
+      .set(as(customer))
+      .expect(200);
+
+    // The webhook arriving afterwards changes nothing.
+    await sendWebhook('payment_intent.succeeded', intent).expect(200);
+    const final = await getOrder(order.id);
+    expect(final.status).toBe('paid');
+    expect(
+      final.statusHistory.filter(
+        (h: { toStatus: string }) => h.toStatus === 'paid',
+      ),
+    ).toHaveLength(1);
+
+    // Another customer can't confirm (or even see) this order.
+    const stranger = await createUser(UserRole.Customer);
+    await http()
+      .post(`/api/orders/${order.id}/payment/confirm`)
+      .set(as(stranger))
+      .expect(404);
+  }, 30_000);
+
+  it('reconciles a paid order nobody confirmed, and lists only paid orders', async () => {
+    const shopper = await createUser(UserRole.Customer);
+    const order = (body: object) =>
+      http().post('/api/orders').set(as(shopper)).send(body).expect(201);
+    const items = [{ productId, quantity: 1, optionIds: [] }];
+
+    const unpaid = (await order({ storeId, items })).body;
+    const abandoned = (await order({ storeId, items })).body;
+    await http()
+      .post(`/api/orders/${abandoned.id}/cancel`)
+      .set(as(shopper))
+      .expect(200);
+
+    // Paid on Stripe, but neither the app nor a webhook told the backend.
+    const paidLater = (await order({ storeId, items })).body;
+    const sheet = (
+      await http()
+        .post(`/api/orders/${paidLater.id}/payment`)
+        .set(as(shopper))
+        .expect(200)
+    ).body;
+    await stripe.paymentIntents.confirm(sheet.paymentIntentId, {
+      payment_method: 'pm_card_visa',
+      return_url: 'brew://stripe',
+    });
+
+    const listed = async () =>
+      (
+        await http().get('/api/orders').set(as(shopper)).expect(200)
+      ).body.items.map((o: { id: string }) => o.id);
+    expect(await listed()).toEqual([]);
+
+    const paid = await app.get(PaymentsService).reconcilePendingPayments(0);
+    expect(paid).toBeGreaterThanOrEqual(1);
+    expect((await getOrder(paidLater.id)).status).toBe('paid');
+
+    // Only the paid order is a real order for the customer.
+    expect(await listed()).toEqual([paidLater.id]);
+    expect((await getOrder(unpaid.id)).status).toBe('pending_payment');
   }, 30_000);
 
   it("explains Stripe's minimum amount instead of failing with 500", async () => {

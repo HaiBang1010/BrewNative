@@ -347,7 +347,11 @@ sequenceDiagram
 
   App->>Stripe: PaymentSheet (thẻ / Apple Pay / Google Pay)
   Stripe-->>App: kết quả trên giao diện
-  Note over App: chuyển sang màn hình theo dõi đơn,<br/>chưa coi là "đã trả" cho tới khi server xác nhận
+  App->>API: POST /api/orders/:id/payment/confirm
+  API->>Stripe: đọc PaymentIntent (bằng secret key)
+  API->>DB: succeeded và đúng số tiền thì order = paid
+  API-->>App: {orderStatus: paid}
+  Note over App,API: Webhook bên dưới làm cùng việc đó, làm đường dự phòng.<br/>Ai tới trước thì đổi trạng thái, người tới sau thấy đơn đã paid nên bỏ qua.
 
   Stripe->>API: webhook payment_intent.succeeded
   API->>API: xác minh chữ ký webhook
@@ -362,6 +366,10 @@ Secret key của Stripe chỉ nằm trong `backend/.env`. App chỉ có publisha
 
 | Tình huống | Backend làm gì |
 |---|---|
+| Khách đóng PaymentSheet / trả lỗi | App hủy đơn nháp; giỏ hàng trên máy giữ nguyên. Đơn chưa từng được trả không hiện trong `GET /api/orders` |
+| App bị tắt ngay sau khi trả, webhook cũng không tới | Job mỗi phút (`PaymentsService.reconcilePendingPayments`) hỏi Stripe về các đơn còn chờ có giao dịch, thấy đã trả thì đổi sang `paid` |
+| Webhook không tới (vd. quên chạy `npm run stripe:listen`) | App gọi `POST /orders/:id/payment/confirm` ngay sau khi trả, và mỗi lần mở một đơn đang chờ mà đã có giao dịch: backend hỏi thẳng Stripe rồi đổi đơn sang `paid` |
+| Đã trả nhưng đơn chưa đổi, khách bấm trả lại | `POST /orders/:id/payment` trả 409 `Payment already received` (không tạo giao dịch thứ hai); app hiện "Đã nhận thanh toán" và nút "Kiểm tra lại" |
 | App đóng giữa chừng, mở lại rồi trả tiền | `POST /orders/:id/payment` trả lại **cùng** PaymentIntent nếu nó vẫn trả được |
 | Thẻ bị từ chối | Đơn vẫn `pending_payment`; lý do lưu ở `payments.last_error`; gọi lại `/payment` để thử thẻ khác |
 | Stripe gửi trùng một webhook | Chỉ xử lý lần đầu (bảng `stripe_events`) |
@@ -536,7 +544,7 @@ Danh sách đầy đủ, kèm schema và nút "Try it out": **http://localhost:3
 | Admin: menu | `/api/admin/categories`, `/api/admin/products` (+ `/:id/image`, `/:id/option-groups`), `/api/admin/option-groups/:id` (+ `/options`), `/api/admin/options/:id` | admin |
 | Admin: cửa hàng | `GET` `POST /api/admin/stores`, `PATCH /api/admin/stores/:id` | admin |
 | Admin: user | `GET /api/admin/users`, `GET /api/admin/users/:id`, `PATCH /api/admin/users/:id/role` | admin |
-| Thanh toán | `POST /api/orders/:id/payment` (trả về tham số cho PaymentSheet) | chủ đơn |
+| Thanh toán | `POST /api/orders/:id/payment` (trả về tham số cho PaymentSheet), `POST /api/orders/:id/payment/confirm` (hỏi Stripe, cập nhật đơn) | chủ đơn |
 | Stripe | `POST /api/webhooks/stripe` (Stripe gọi, xác minh bằng header `Stripe-Signature`) | Stripe |
 | Dev | `POST /api/dev/orders/:id/mark-paid` (bỏ qua Stripe khi phát triển) | chủ đơn hoặc staff |
 
