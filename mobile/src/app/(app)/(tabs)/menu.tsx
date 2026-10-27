@@ -2,8 +2,8 @@ import { Image } from 'expo-image';
 import { Link } from 'expo-router';
 import { Pressable, RefreshControl, SectionList, Text, View } from 'react-native';
 import { EmptyView, ErrorView, LoadingView } from '@/components/ui/screen-state';
-import { formatVnd } from '@/lib/format';
-import { useMenu } from '@/lib/queries';
+import { formatVnd } from '@/utils/format';
+import { useMenu } from '@/hooks/queries';
 import type { Product } from '@/types/api';
 
 export default function MenuScreen() {

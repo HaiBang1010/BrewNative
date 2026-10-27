@@ -1,4 +1,4 @@
-import { ApiError } from './api';
+import { ApiError } from './api-error';
 
 /** Vietnamese text for the backend messages a user is likely to see. */
 const KNOWN_MESSAGES: Record<string, string> = {
@@ -6,6 +6,11 @@ const KNOWN_MESSAGES: Record<string, string> = {
   'Email is already registered': 'Email này đã được đăng ký',
   'Invalid Google ID token': 'Đăng nhập Google không hợp lệ, thử lại nhé',
   'Google email is not verified': 'Email Google chưa được xác minh',
+  'Payment already received': 'Đơn đã được thanh toán, đang chờ xác nhận',
+  'Payment is already being processed': 'Thanh toán đang được xử lý, vui lòng đợi',
+  'Order is not awaiting payment': 'Đơn này không còn chờ thanh toán',
+  'A payment for this order is already being processed':
+    'Đơn đang được thanh toán nên không hủy được',
 };
 
 /** A message to show the user for any thrown error. */

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, Text } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
-import { useAuth } from '@/lib/auth';
-import { errorMessage } from '@/lib/errors';
+import { useAuth } from '@/lib/auth-provider';
+import { errorMessage } from '@/utils/errors';
 
 export default function RegisterScreen() {
   const { register } = useAuth();

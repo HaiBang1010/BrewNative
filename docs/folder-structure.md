@@ -26,20 +26,38 @@ mobile/
 ├── src/
 │   ├── app/                    # Mỗi file là một màn hình (route). Xem bảng bên dưới
 │   ├── components/
-│   │   └── ui/                 # Button, TextField, ComingSoon...
-│   ├── hooks/                  # Custom hook
-│   ├── lib/
-│   │   ├── api.ts              # Gọi backend: thêm token, tự refresh khi 401 (chỉ 1 lần refresh cùng lúc)
+│   │   ├── ui/                 # Button, TextField, Chip, QuantityStepper, LoadingView...
+│   │   └── cart-button.tsx     # Icon giỏ hàng có badge (header màn Menu)
+│   ├── hooks/                  # Hook React: thêm cache (TanStack Query) cho services/
+│   │   ├── queries.ts          # useMe, useMenu, useOrders... và useCreateOrder, useCancelOrder
+│   │   └── payments.ts         # usePayOrder (Stripe PaymentSheet), useConfirmPayment
+│   ├── services/               # Gọi ra bên ngoài: backend, keychain, Google
+│   │   ├── api-client.ts       # fetch + token + tự refresh khi 401 (1 lần refresh cùng lúc)
 │   │   ├── session.ts          # Client API dùng chung + lưu token vào keychain (expo-secure-store)
-│   │   ├── auth.tsx            # AuthProvider / useAuth: đăng nhập, đăng ký, Google, đăng xuất
-│   │   ├── queries.ts          # Hook TanStack Query: useMe, useMenu, useProduct, useOrders, useOrder
-│   │   ├── query-client.ts     # Cấu hình cache, refetch khi app quay lại foreground
-│   │   ├── google-sign-in.ts   # Google Sign-In (chỉ chạy trên development build)
-│   │   ├── errors.ts           # Đổi lỗi thành câu tiếng Việt cho người dùng
-│   │   └── format.ts           # Định dạng tiền VND, ngày giờ, tên trạng thái đơn
-│   ├── stores/                 # State toàn cục (Zustand): giỏ hàng...
+│   │   ├── auth.service.ts     # /auth: login, register, Google, logout
+│   │   ├── user.service.ts     # /me
+│   │   ├── menu.service.ts     # /menu, /products, /stores
+│   │   ├── order.service.ts    # /orders và thanh toán
+│   │   └── google-sign-in.ts   # SDK Google Sign-In
+│   ├── lib/                    # Cấu hình thư viện và provider dùng cho cả app
+│   │   ├── app-providers.tsx   # Gom mọi provider; app/_layout.tsx chỉ dùng cái này
+│   │   ├── auth-provider.tsx   # AuthProvider / useAuth: trạng thái đăng nhập
+│   │   ├── query-client.ts     # Cấu hình TanStack Query
+│   │   ├── query-keys.ts       # Khóa cache dùng chung
+│   │   └── stripe.ts           # Publishable key, URL quay lại app của Stripe
+│   ├── stores/
+│   │   └── cart.ts             # Giỏ hàng: Zustand, lưu xuống máy bằng MMKV
+│   ├── types/                  # Chỉ kiểu dữ liệu, không có code chạy
+│   │   ├── api.ts              # Dữ liệu backend trả về và body gửi lên
+│   │   ├── auth.ts             # Tokens, TokenStore
+│   │   ├── cart.ts             # CartItem, ChosenOption, Selection
+│   │   └── payment.ts          # ConfirmResult, PayResult
+│   ├── utils/                  # Hàm thuần: không React, không gọi mạng
+│   │   ├── api-error.ts        # Lớp ApiError
+│   │   ├── errors.ts           # Đổi lỗi thành câu tiếng Việt
+│   │   ├── format.ts           # Tiền VND, ngày giờ, tên trạng thái đơn
+│   │   └── cart-pricing.ts     # Chọn tùy chọn món, kiểm tra min/max, tính giá
 │   ├── constants/              # Hằng số
-│   ├── types/                  # api.ts: kiểu dữ liệu backend trả về
 │   └── global.css              # Tailwind; import một lần ở app/_layout.tsx
 ├── assets/                     # Icon, splash, font, ảnh tĩnh
 ├── app.json                    # Cấu hình Expo: tên, bundle id, scheme "brew", plugin
@@ -73,10 +91,43 @@ mobile/
 Thư mục trong ngoặc như `(auth)`, `(app)`, `(tabs)` là **nhóm**: dùng để gom màn hình và layout, không xuất hiện trong
 đường dẫn. Deep link: `brew://orders/123` (bản build thật) hoặc `exp://<IP>:8081/--/orders/123` (Expo Go).
 
-Các màn hình lấy dữ liệu thật từ backend (`EXPO_PUBLIC_API_URL` trong `.env`). Chưa có: chọn tùy chọn và giỏ hàng,
-thanh toán, cập nhật realtime qua WebSocket, chat.
+Các màn hình lấy dữ liệu thật từ backend (`EXPO_PUBLIC_API_URL` trong `.env`). Chưa có: cập nhật realtime qua
+WebSocket, chat, push notification.
+
+**Từ bước giỏ hàng, app không chạy trên Expo Go nữa**: MMKV (giỏ hàng) và Google Sign-In là code native mà Expo Go
+không có. Dùng development build (`npm run ios` / `npm run android`).
+
+Luồng đặt món: **trả tiền xong mới thành đơn**. Chi tiết món (chọn tùy chọn) → Giỏ hàng → bấm "Thanh toán":
+app tạo một đơn nháp (`POST /api/orders`, để server tính giá và tạo PaymentIntent) rồi mở Stripe PaymentSheet ngay
+trên màn giỏ hàng.
+- Trả xong: app gọi `POST /api/orders/:id/payment/confirm`, xóa giỏ, chuyển sang màn đơn.
+- Đóng PaymentSheet hoặc lỗi: app hủy đơn nháp, **giỏ hàng giữ nguyên**.
+- Đơn nháp (chưa từng được trả) không hiện trong tab Đơn hàng.
 
 ### Quy ước
+
+**Mỗi thư mục giữ một loại thứ, và chỉ được import "xuống dưới":**
+
+```
+app/, components/  →  hooks/, lib/*-provider.tsx  →  stores/, services/, lib/ (cấu hình)  →  utils/  →  types/
+```
+
+| Thư mục | Chứa | Được import |
+|---|---|---|
+| `types/` | Chỉ `type` | `types/` |
+| `utils/` | Hàm thuần (vào → ra), test được không cần app | `types/`, `utils/` |
+| `lib/` (cấu hình: `query-client`, `query-keys`, `stripe`) | Cấu hình thư viện | `types/`, `utils/` |
+| `services/` | Gọi backend và SDK bên ngoài. **Chỉ ở đây mới dùng `api`.** Không dùng React (component, hook) | `types/`, `utils/`, `services/` |
+| `stores/` | State toàn cục (Zustand) | `types/`, `utils/` |
+| `lib/*-provider.tsx` | Context React dùng cho cả app (đặt tên `*-provider.tsx`) | `types/`, `utils/`, `services/`, `stores/`, cấu hình trong `lib/` |
+| `hooks/` | Hook React: gọi `services/` và thêm cache | các lớp bên dưới |
+| `components/`, `app/` | Giao diện. Lấy dữ liệu qua `hooks/`, không gọi `services/` trực tiếp | mọi thứ |
+
+Thêm một endpoint mới: viết hàm trong `services/<tên>.service.ts`, thêm khóa trong `lib/query-keys.ts`, bọc bằng hook
+trong `hooks/`, rồi màn hình dùng hook đó.
+
+Kiểu dùng ở nhiều file đặt trong `types/`; kiểu chỉ dùng bên trong một file (như `AuthState`) để lại ngay trong file đó.
+
 
 - **`src/app/` chỉ chứa màn hình.** Logic và UI phức tạp tách ra `components/`, `hooks/`, `lib/`.
   Expo Router coi mọi file trong `app/` là một route, nên đừng đặt component hay helper vào đó.
@@ -91,8 +142,7 @@ thanh toán, cập nhật realtime qua WebSocket, chat.
   `contentInsetAdjustmentBehavior="automatic"`. Từ iOS 26 thanh tiêu đề nổi đè lên nội dung; thiếu prop này thì
   phần đầu màn hình bị che (React Native mặc định là `"never"`).
 - Sau khi sửa `tailwind.config.js`, `babel.config.js` hoặc `metro.config.js`: chạy `npx expo start --clear`.
-- **Không gọi `fetch` trực tiếp trong màn hình.** Đọc dữ liệu bằng hook trong `lib/queries.ts`;
-  gọi API khác qua `api` trong `lib/session.ts`.
+- **Không gọi `fetch` trực tiếp trong màn hình.** Màn hình dùng hook trong `hooks/`; hook gọi `services/`.
 - Màn hình lấy dữ liệu thì xử lý đủ 3 trạng thái: `isPending` → `<LoadingView />`, `error` → `<ErrorView />`,
   có dữ liệu → nội dung. Danh sách có kéo để làm mới (`RefreshControl`).
 - Thư mục `ios/` và `android/` do Expo tự sinh khi build (`npx expo prebuild` / `run:ios`), đã nằm trong `.gitignore`,

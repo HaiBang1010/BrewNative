@@ -25,8 +25,12 @@ npx expo start         # rồi bấm i (iOS Simulator) hoặc quét QR bằng Ex
 
 Cần backend đang chạy (xem bên dưới). Khi chạy dev, màn đăng nhập điền sẵn tài khoản mẫu `customer@brew.local`.
 
-Hiện app vẫn chạy được trên Expo Go. Khi tới phần cần code native (Google Sign-In, Stripe, push) thì dùng
-development build: `npm run ios` / `npm run android` (`expo run:*`).
+App cần **development build** (không chạy trên Expo Go vì có MMKV, Google Sign-In): build một lần bằng
+`npm run ios` / `npm run android`, sau đó mỗi ngày chỉ cần `npx expo start`. Sửa `app.json` hoặc cài thư viện có code
+native thì chạy `npx expo prebuild --clean` rồi build lại.
+
+Thử thanh toán: trong `backend/` chạy thêm `npm run stripe:listen` (để webhook của Stripe về được máy), dùng thẻ test
+`4242 4242 4242 4242`, ngày hết hạn bất kỳ trong tương lai, CVC bất kỳ.
 
 ## Chạy backend
 

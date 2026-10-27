@@ -37,7 +37,21 @@
       "expo-font",
       "expo-secure-store",
       "expo-image",
-      "expo-splash-screen"
+      "expo-splash-screen",
+      [
+        "@stripe/stripe-react-native",
+        {
+          "enableGooglePay": false
+        }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "dynamic"
+          }
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

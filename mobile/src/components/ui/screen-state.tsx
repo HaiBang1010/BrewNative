@@ -1,5 +1,5 @@
 import { ActivityIndicator, Text, View } from 'react-native';
-import { errorMessage } from '@/lib/errors';
+import { errorMessage } from '@/utils/errors';
 import { Button } from './button';
 
 /** Full-screen spinner while a query loads for the first time. */

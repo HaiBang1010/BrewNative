@@ -1,25 +1,20 @@
 import '../global.css';
 
-import { QueryClientProvider } from '@tanstack/react-query';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { AuthProvider, useAuth } from '@/lib/auth';
-import { queryClient, useRefetchOnAppFocus } from '@/lib/query-client';
+import { AppProviders } from '@/lib/app-providers';
+import { useAuth } from '@/lib/auth-provider';
 
 // Keep the splash screen up until we know whether the user is signed in,
 // so the login screen doesn't flash before jumping to the home screen.
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  useRefetchOnAppFocus();
-
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <RootNavigator />
-        <StatusBar style="dark" />
-      </AuthProvider>
-    </QueryClientProvider>
+    <AppProviders>
+      <RootNavigator />
+      <StatusBar style="dark" />
+    </AppProviders>
   );
 }
 

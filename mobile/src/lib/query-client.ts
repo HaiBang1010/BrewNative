@@ -1,7 +1,7 @@
 import { QueryClient, focusManager } from '@tanstack/react-query';
 import { useEffect } from 'react';
 import { AppState, Platform } from 'react-native';
-import { ApiError } from './api';
+import { ApiError } from '@/utils/api-error';
 
 export const queryClient = new QueryClient({
   defaultOptions: {

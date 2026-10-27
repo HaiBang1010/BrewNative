@@ -1,33 +1,14 @@
+import type { TokenStore, Tokens } from '@/types/auth';
+import { ApiError } from '@/utils/api-error';
+
 /**
- * Small fetch wrapper for the backend. Has no React Native imports on purpose,
- * so it can be tested with plain Node.
+ * Small fetch wrapper for the backend. No React Native imports: it only needs fetch.
  *
  * - Adds `Authorization: Bearer <accessToken>`.
  * - On 401, refreshes the access token once and retries the request.
  * - Only one refresh runs at a time: the backend treats a reused refresh token as
  *   stolen and signs the user out everywhere, so parallel refreshes must not happen.
  */
-
-export type Tokens = { accessToken: string; refreshToken: string };
-
-export type TokenStore = {
-  get(): Promise<Tokens | null>;
-  set(tokens: Tokens | null): Promise<void>;
-};
-
-/** Error response from the API. `message` is the backend's text (or the first of several). */
-export class ApiError extends Error {
-  readonly status: number;
-  /** All messages, e.g. one per invalid field for a 400. */
-  readonly messages: string[];
-
-  constructor(status: number, message: string, messages: string[] = [message]) {
-    super(message);
-    this.name = 'ApiError';
-    this.status = status;
-    this.messages = messages;
-  }
-}
 
 type RequestOptions = {
   body?: unknown;
@@ -47,7 +28,12 @@ export function createApiClient(options: {
   const { baseUrl, tokens } = options;
   let refreshing: Promise<string | null> | null = null;
 
-  function send(method: string, path: string, accessToken: string | undefined, opts: RequestOptions) {
+  function send(
+    method: string,
+    path: string,
+    accessToken: string | undefined,
+    opts: RequestOptions,
+  ) {
     return fetch(`${baseUrl}${path}`, {
       method,
       headers: {
@@ -74,7 +60,10 @@ export function createApiClient(options: {
         return null;
       }
       const data = await parse<Tokens>(res);
-      await tokens.set({ accessToken: data.accessToken, refreshToken: data.refreshToken });
+      await tokens.set({
+        accessToken: data.accessToken,
+        refreshToken: data.refreshToken,
+      });
       return data.accessToken;
     })().finally(() => {
       refreshing = null;

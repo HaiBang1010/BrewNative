@@ -1,5 +1,6 @@
 import * as SecureStore from 'expo-secure-store';
-import { createApiClient, type TokenStore, type Tokens } from './api';
+import type { TokenStore, Tokens } from '@/types/auth';
+import { createApiClient } from './api-client';
 
 /**
  * The app's single API client, with tokens kept in the device keychain

@@ -1,4 +1,3 @@
-import Constants from 'expo-constants';
 import { useQueryClient } from '@tanstack/react-query';
 import {
   createContext,
@@ -9,10 +8,11 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { queryKeys } from '@/lib/query-keys';
+import { authService } from '@/services/auth.service';
+import { getGoogleIdToken, signOutOfGoogle } from '@/services/google-sign-in';
+import { onSessionExpired, tokenStore } from '@/services/session';
 import type { AuthResponse } from '@/types/api';
-import { getGoogleIdToken, signOutOfGoogle } from './google-sign-in';
-import { meQueryKey } from './queries';
-import { api, onSessionExpired, tokenStore } from './session';
 
 type AuthState = {
   /** True until the saved tokens have been read from the keychain at startup. */
@@ -27,9 +27,11 @@ type AuthState = {
 
 const AuthContext = createContext<AuthState | null>(null);
 
-/** Shown in the backend's list of signed-in devices. */
-const deviceName = Constants.deviceName ?? undefined;
-
+/**
+ * Holds the signed-in state for the whole app. The API calls themselves live in
+ * services/auth.service.ts; this provider decides what they mean for the app
+ * (save tokens, fill the cache, switch between the (auth) and (app) screens).
+ */
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const [isLoading, setIsLoading] = useState(true);
@@ -61,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         refreshToken: response.refreshToken,
       });
       // The login response already contains the user: no need to fetch /me.
-      queryClient.setQueryData(meQueryKey, response.user);
+      queryClient.setQueryData(queryKeys.me, response.user);
       setIsSignedIn(true);
     },
     [queryClient],
@@ -69,24 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signIn = useCallback(
     async (email: string, password: string) => {
-      const response = await api.post<AuthResponse>(
-        '/auth/login',
-        { email, password, deviceName },
-        { auth: false },
-      );
-      await startSession(response);
+      await startSession(await authService.login(email, password));
     },
     [startSession],
   );
 
   const register = useCallback(
     async (fullName: string, email: string, password: string) => {
-      const response = await api.post<AuthResponse>(
-        '/auth/register',
-        { fullName, email, password, deviceName },
-        { auth: false },
-      );
-      await startSession(response);
+      await startSession(await authService.register(fullName, email, password));
     },
     [startSession],
   );
@@ -94,12 +86,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithGoogle = useCallback(async () => {
     const idToken = await getGoogleIdToken();
     if (!idToken) return false;
-    const response = await api.post<AuthResponse>(
-      '/auth/google',
-      { idToken, deviceName },
-      { auth: false },
-    );
-    await startSession(response);
+    await startSession(await authService.loginWithGoogle(idToken));
     return true;
   }, [startSession]);
 
@@ -108,9 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Tell the backend to revoke the refresh token. If that fails (offline),
     // still sign out locally: the token expires on its own.
     if (tokens) {
-      await api
-        .post('/auth/logout', { refreshToken: tokens.refreshToken }, { auth: false })
-        .catch(() => undefined);
+      await authService.logout(tokens.refreshToken).catch(() => undefined);
     }
     await tokenStore.set(null);
     await signOutOfGoogle();

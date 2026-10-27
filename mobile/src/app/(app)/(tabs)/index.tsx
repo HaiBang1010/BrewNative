@@ -2,7 +2,8 @@ import { Link } from 'expo-router';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
-import { useMe } from '@/lib/queries';
+import { useMe } from '@/hooks/queries';
+import { useCartCount } from '@/stores/cart';
 
 function greeting(): string {
   const hour = new Date().getHours();
@@ -16,6 +17,7 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const { data: me } = useMe();
   const firstName = me?.fullName.split(' ').at(-1);
+  const cartCount = useCartCount();
 
   return (
     <ScrollView
@@ -43,7 +45,10 @@ export default function HomeScreen() {
       </View>
 
       <Link href="/cart" asChild>
-        <Button title="Mở giỏ hàng" variant="outline" />
+        <Button
+          title={cartCount > 0 ? `Giỏ hàng (${cartCount} món)` : 'Mở giỏ hàng'}
+          variant="outline"
+        />
       </Link>
     </ScrollView>
   );

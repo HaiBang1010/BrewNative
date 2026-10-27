@@ -79,13 +79,7 @@ export type Store = {
 };
 
 export type OrderStatus =
-  | 'pending_payment'
-  | 'paid'
-  | 'accepted'
-  | 'preparing'
-  | 'ready'
-  | 'completed'
-  | 'cancelled';
+  'pending_payment' | 'paid' | 'accepted' | 'preparing' | 'ready' | 'completed' | 'cancelled';
 
 export type OrderItemOption = {
   id: string;
@@ -112,6 +106,36 @@ export type OrderStatusHistoryEntry = {
   createdAt: string;
 };
 
+export type PaymentStatus =
+  | 'requires_payment_method'
+  | 'requires_confirmation'
+  | 'requires_action'
+  | 'processing'
+  | 'requires_capture'
+  | 'canceled'
+  | 'succeeded';
+
+export type Payment = {
+  id: string;
+  stripePaymentIntentId: string;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  amountRefunded: number;
+  /** e.g. "Your card was declined." */
+  lastError: string | null;
+  createdAt: string;
+};
+
+/** Returned by POST /orders/:id/payment: what Stripe PaymentSheet needs. */
+export type PaymentSheetParams = {
+  paymentIntentId: string;
+  clientSecret: string;
+  publishableKey: string | null;
+  amount: number;
+  currency: string;
+};
+
 export type Order = {
   id: string;
   number: number;
@@ -129,6 +153,14 @@ export type Order = {
   store: Store;
   items: OrderItem[];
   statusHistory?: OrderStatusHistoryEntry[];
+  payments?: Payment[];
+};
+
+/** Body of POST /orders: only ids and quantities, the server prices everything. */
+export type CreateOrderInput = {
+  storeId: string;
+  note?: string;
+  items: { productId: string; quantity: number; optionIds: string[] }[];
 };
 
 export type Paginated<T> = {

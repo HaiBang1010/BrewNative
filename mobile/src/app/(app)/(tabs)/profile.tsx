@@ -4,8 +4,8 @@ import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
 import { Button } from '@/components/ui/button';
 import { ErrorView, LoadingView } from '@/components/ui/screen-state';
-import { useAuth } from '@/lib/auth';
-import { useMe } from '@/lib/queries';
+import { useAuth } from '@/lib/auth-provider';
+import { useMe } from '@/hooks/queries';
 
 export default function ProfileScreen() {
   const { signOut } = useAuth();

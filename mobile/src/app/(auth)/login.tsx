@@ -4,9 +4,9 @@ import { KeyboardAvoidingView, Platform, ScrollView, Text, View } from 'react-na
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/ui/button';
 import { TextField } from '@/components/ui/text-field';
-import { useAuth } from '@/lib/auth';
-import { errorMessage } from '@/lib/errors';
-import { isGoogleSignInAvailable } from '@/lib/google-sign-in';
+import { useAuth } from '@/lib/auth-provider';
+import { errorMessage } from '@/utils/errors';
+import { isGoogleSignInAvailable } from '@/services/google-sign-in';
 
 export default function LoginScreen() {
   const { signIn, signInWithGoogle } = useAuth();
