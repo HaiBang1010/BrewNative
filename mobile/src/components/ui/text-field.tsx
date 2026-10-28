@@ -27,7 +27,7 @@ export function TextField({ label, error, hint, tone = 'light', multiline, ...pr
         placeholderTextColor={COLORS.inkMuted}
         multiline={multiline}
         textAlignVertical={multiline ? 'top' : 'center'}
-        className={`${size} rounded-xl border px-4 font-sora text-sm ${t.input} ${error ? 'border-red-500' : t.border}`}
+        className={`${size} rounded-xl border px-4 font-app text-sm ${t.input} ${error ? 'border-red-500' : t.border}`}
         {...props}
       />
       {error ? (

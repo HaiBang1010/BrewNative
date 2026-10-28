@@ -163,7 +163,7 @@ function StoreForm({ store }: { store: Store | undefined }) {
   );
 }
 
-const TIME_INPUT = 'h-10 w-[68px] rounded-lg border border-line bg-white text-center font-sora text-sm text-ink';
+const TIME_INPUT = 'h-10 w-[68px] rounded-lg border border-line bg-white text-center font-app text-sm text-ink';
 
 function DayRow({
   label,

@@ -20,11 +20,11 @@ export const COLORS = {
   imagePlaceholder: '#EDEDED',
 } as const;
 
-/** Sora, loaded in app/_layout.tsx. One family per weight. */
+/** Be Vietnam Pro, loaded in app/_layout.tsx. One family per weight. */
 export const FONTS = {
-  light: 'Sora-Light',
-  regular: 'Sora-Regular',
-  medium: 'Sora-Medium',
-  semibold: 'Sora-SemiBold',
-  bold: 'Sora-Bold',
+  light: 'BeVietnamPro-Light',
+  regular: 'BeVietnamPro-Regular',
+  medium: 'BeVietnamPro-Medium',
+  semibold: 'BeVietnamPro-SemiBold',
+  bold: 'BeVietnamPro-Bold',
 } as const;

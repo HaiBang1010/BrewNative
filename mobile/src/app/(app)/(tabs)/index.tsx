@@ -95,7 +95,7 @@ export default function HomeScreen() {
               placeholderTextColor={COLORS.inkMuted}
               returnKeyType="search"
               autoCorrect={false}
-              className="h-full flex-1 font-sora text-sm text-white"
+              className="h-full flex-1 font-app text-sm text-white"
             />
             {query ? (
               <Ionicons

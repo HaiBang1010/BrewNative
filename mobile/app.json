@@ -7,6 +7,7 @@
     "scheme": "brew",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "primaryColor": "#C67C4E",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.brew.reactnative"
@@ -72,6 +73,12 @@
           "photosPermission": "Brew cần truy cập ảnh để bạn chọn ảnh cho món trong menu.",
           "cameraPermission": false,
           "microphonePermission": false
+        }
+      ],
+      [
+        "./plugins/with-android-theme",
+        {
+          "accentColor": "#C67C4E"
         }
       ]
     ],

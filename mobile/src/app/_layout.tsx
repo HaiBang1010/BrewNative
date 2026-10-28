@@ -2,13 +2,13 @@ import '../global.css';
 import '@/lib/nativewind-interop';
 
 import {
-  Sora_300Light,
-  Sora_400Regular,
-  Sora_500Medium,
-  Sora_600SemiBold,
-  Sora_700Bold,
+  BeVietnamPro_300Light,
+  BeVietnamPro_400Regular,
+  BeVietnamPro_500Medium,
+  BeVietnamPro_600SemiBold,
+  BeVietnamPro_700Bold,
   useFonts,
-} from '@expo-google-fonts/sora';
+} from '@expo-google-fonts/be-vietnam-pro';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AnimatedSplash } from '@/components/animated-splash';
@@ -23,14 +23,14 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   // Bundled with the JS (no native rebuild needed). On error, text falls back to the system font.
   // Keys are the fonts' real PostScript names: iOS then finds them directly. Under any other
-  // name (e.g. "Sora_700Bold") it goes through an alias that React Native's text measuring
+  // name (e.g. "BeVietnamPro_700Bold") it goes through an alias that React Native's text measuring
   // doesn't see, so text is measured with the system font and drawn wider: the end gets cut off.
   const [fontsLoaded, fontError] = useFonts({
-    'Sora-Light': Sora_300Light,
-    'Sora-Regular': Sora_400Regular,
-    'Sora-Medium': Sora_500Medium,
-    'Sora-SemiBold': Sora_600SemiBold,
-    'Sora-Bold': Sora_700Bold,
+    'BeVietnamPro-Light': BeVietnamPro_300Light,
+    'BeVietnamPro-Regular': BeVietnamPro_400Regular,
+    'BeVietnamPro-Medium': BeVietnamPro_500Medium,
+    'BeVietnamPro-SemiBold': BeVietnamPro_600SemiBold,
+    'BeVietnamPro-Bold': BeVietnamPro_700Bold,
   });
   if (!fontsLoaded && !fontError) return null;
 

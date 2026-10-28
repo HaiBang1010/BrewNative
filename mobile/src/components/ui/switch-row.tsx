@@ -41,6 +41,7 @@ export function BrandSwitch({
       onValueChange={onChange}
       disabled={disabled}
       trackColor={{ true: COLORS.brand, false: COLORS.line }}
+      // The thumb stays white: on Android that comes from the theme (plugins/with-android-theme.js).
       ios_backgroundColor={COLORS.line}
       accessibilityLabel={accessibilityLabel}
     />

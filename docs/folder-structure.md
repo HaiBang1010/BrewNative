@@ -26,7 +26,7 @@ mobile/
 ├── src/
 │   ├── app/                    # Mỗi file là một màn hình (route). Xem bảng bên dưới
 │   ├── components/
-│   │   ├── ui/                 # Text (font Sora), Button, TextField, PriceField, SwitchRow, Chip, QuantityStepper, LoadingView...
+│   │   ├── ui/                 # Text (font Be Vietnam Pro), Button, TextField, PriceField, SwitchRow, Chip, QuantityStepper, LoadingView...
 │   │   ├── menu/               # ProductCard (ô lưới 2 cột), CategoryChips, PromoBanner
 │   │   ├── admin-menu/         # Quản lý menu: dòng món có công tắc còn hàng, chọn ảnh, dòng tuỳ chọn, khung form
 │   │   ├── chat/chat-thread.tsx  # Giao diện chat dùng chung cho khách và quán
@@ -101,6 +101,7 @@ mobile/
 ├── assets/                     # Icon, splash, ảnh tĩnh (images/figma/: ảnh lấy từ thiết kế Figma)
 │   └── animations/brew-splash.json # Animation Lottie của splash
 ├── scripts/brand/generate.py   # Sinh icon, ảnh splash và file Lottie từ cùng một hình (xem "Splash" bên dưới)
+├── plugins/with-android-theme.js # Màu thương hiệu cho widget Android (nút Alert, công tắc), áp dụng khi prebuild
 ├── app.json                    # Cấu hình Expo: tên, bundle id, scheme "brew", plugin
 ├── babel.config.js             # NativeWind (biến className thành style)
 ├── metro.config.js             # NativeWind đọc src/global.css
@@ -196,6 +197,22 @@ lúc mất kết nối không được gửi lại.
 **Từ bước giỏ hàng, app không chạy trên Expo Go nữa**: MMKV (giỏ hàng) và Google Sign-In là code native mà Expo Go
 không có. Dùng development build (`npm run ios` / `npm run android`).
 
+**Build Android** (emulator `Pixel_8`):
+```bash
+export ANDROID_HOME=$HOME/Library/Android/sdk          # nên thêm vào ~/.zshrc
+$ANDROID_HOME/emulator/emulator -avd Pixel_8 &
+$ANDROID_HOME/platform-tools/adb reverse tcp:3100 tcp:3100   # chạy lại mỗi khi emulator khởi động
+npx expo prebuild --clean -p android
+npx expo run:android -d Pixel_8
+```
+- Thiếu `ANDROID_HOME` thì Gradle báo "SDK location not found" (`prebuild --clean` xoá `android/local.properties`).
+- `adb reverse`: backend trả link ảnh `http://localhost:3100/...`, mà `localhost` trên Android là chính máy đó.
+- Android 17 hỏi quyền **thiết bị lân cận** (truy cập mạng LAN) lần đầu mở bản dev, vì JS tải từ Metro ở
+  `192.168.x.x`. Chọn Allow. Bản phát hành gọi server trên internet thì không cần.
+- Push thật trên Android cần `google-services.json` (Firebase), xem phần Push notification.
+- Màu: `app.json` có `primaryColor`, còn màu nhấn và nút tròn công tắc màu trắng do `plugins/with-android-theme.js`.
+  `thumbColor` của `<Switch>` không đổi được màu nút tròn trên Android (React Native chỉ nhân màu lên màu theme).
+
 Luồng đặt món: **trả tiền xong mới thành đơn**. Chi tiết món (chọn tùy chọn) → Giỏ hàng → bấm "Thanh toán":
 app tạo một đơn nháp (`POST /api/orders`, để server tính giá và tạo PaymentIntent) rồi mở Stripe PaymentSheet ngay
 trên màn giỏ hàng.
@@ -279,9 +296,11 @@ Kiểu dùng ở nhiều file đặt trong `types/`; kiểu chỉ dùng bên tro
 - **Style bằng `className` (Tailwind).** Màu khai báo trong `tailwind.config.js`: `brand` (nâu cà phê), `ink`
   (chữ: `text-ink`, `text-ink-soft`, `text-ink-muted`), `line` (viền), `surface` (nền), `night` (nền tối).
   Không hardcode mã màu trong component; prop không nhận `className` thì dùng `COLORS` trong `constants/theme.ts`.
-- **Chữ: dùng `Text` của `@/components/ui/text`, không import `Text` từ `react-native`.** Font Sora được nạp theo
-  từng độ đậm, đặt theo tên PostScript (`Sora-SemiBold`...; tên khác thì iOS đo chữ sai, chữ bị cắt), nên `font-semibold` của Text gốc sẽ rơi về font hệ thống; `Text` của app tự
-  đổi `font-light/normal/medium/semibold/bold` sang đúng font. `TextInput` thì thêm class `font-sora`.
+- **Chữ: dùng `Text` của `@/components/ui/text`, không import `Text` từ `react-native`.** Font Be Vietnam Pro được nạp theo
+  từng độ đậm, đặt theo tên PostScript (`BeVietnamPro-SemiBold`...; tên khác thì iOS đo chữ sai, chữ bị cắt), nên `font-semibold` của Text gốc sẽ rơi về font hệ thống; `Text` của app tự
+  đổi `font-light/normal/medium/semibold/bold` sang đúng font. `TextInput` thì thêm class `font-app`.
+- **Font phải có đủ chữ tiếng Việt.** Figma dùng Sora, nhưng Sora thiếu 96 ký tự tiếng Việt (ạ, ả, ỉ, ư có dấu, ố...):
+  máy lấy chữ thiếu từ font hệ thống nên một từ có hai font, dấu lệch. Đổi font thì kiểm tra lại đủ ký tự trước.
 - `className` chỉ có tác dụng trên component của React Native (`View`, `Text`, `Pressable`, `ScrollView`...).
   Với component của thư viện như `Link` của Expo Router, dùng `asChild` và đặt `className` lên phần tử con.
 - Icon: `@react-native-vector-icons/ionicons` (Expo khuyên dùng thay cho `@expo/vector-icons`).

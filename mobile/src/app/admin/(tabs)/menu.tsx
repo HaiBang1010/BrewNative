@@ -91,7 +91,7 @@ export default function AdminMenuScreen() {
               placeholderTextColor={COLORS.inkMuted}
               returnKeyType="search"
               clearButtonMode="while-editing"
-              className="flex-1 font-sora text-sm text-ink"
+              className="flex-1 font-app text-sm text-ink"
             />
           </View>
           <View className="-mx-6">

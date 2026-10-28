@@ -17,7 +17,7 @@ type OptionRowProps = {
   onRemove: () => void;
 };
 
-const INPUT = 'h-11 rounded-xl border bg-white px-3 font-sora text-sm text-ink';
+const INPUT = 'h-11 rounded-xl border bg-white px-3 font-app text-sm text-ink';
 
 /** One choice of an option group: name, extra price, in stock, order, remove. */
 export function OptionRow({ option, showErrors, onChange, onMoveUp, onMoveDown, onRemove }: OptionRowProps) {

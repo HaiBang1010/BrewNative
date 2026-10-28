@@ -2,7 +2,7 @@ import { Ionicons } from "@react-native-vector-icons/ionicons";
 import { Image } from "expo-image";
 import { Link, router } from "expo-router";
 import { useEffect, useState, type ComponentProps } from "react";
-import { Pressable, View } from "react-native";
+import { ActivityIndicator, Pressable, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Button } from "@/components/ui/button";
@@ -31,12 +31,17 @@ export default function CartScreen() {
   const push = usePush();
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Set once paid: the cart is emptied while the order screen slides in over this one.
+  const [paid, setPaid] = useState(false);
 
   // Pick the first store if none is chosen yet (or the saved one was closed).
   useEffect(() => {
     if (stores?.length && !stores.some((s) => s.id === storeId))
       setStoreId(stores[0].id);
   }, [stores, storeId, setStoreId]);
+
+  // Without this, "Giỏ hàng đang trống" would show during that transition.
+  if (paid) return <PaidView />;
 
   if (items.length === 0) {
     return (
@@ -98,6 +103,7 @@ export default function CartScreen() {
         return;
       }
       // Paid: now it is a real order. `replace` so Back doesn't return to the cart.
+      setPaid(true);
       clear();
       // Now is when "we'll tell you when it's ready" makes sense: ask for notifications.
       void push.enable();
@@ -192,10 +198,11 @@ export default function CartScreen() {
         style={{ paddingBottom: insets.bottom + 12 }}
       >
         <View className="flex-row items-center gap-4">
-          <Ionicons name="wallet-outline" size={20} color={COLORS.brand} />
+          <Ionicons name="card-outline" size={20} color={COLORS.brand} />
           <View className="flex-1 gap-1">
+            {/* Card only: Apple Pay / Google Pay aren't set up in PaymentSheet. */}
             <Text className="text-sm font-semibold text-ink">
-              Thẻ / Apple Pay
+              Thẻ ngân hàng
             </Text>
             <Text className="text-xs font-semibold text-brand">
               {formatVnd(total)}
@@ -377,6 +384,22 @@ function CartRow({
           onChange={(quantity) => setQuantity(item.key, quantity)}
         />
       )}
+    </View>
+  );
+}
+
+/** Shown for the moment between paying and the order screen. */
+function PaidView() {
+  return (
+    <View className="flex-1 items-center justify-center gap-4 px-8">
+      <View className="h-20 w-20 items-center justify-center rounded-full bg-success">
+        <Ionicons name="checkmark" size={40} color={COLORS.white} />
+      </View>
+      <Text className="text-base font-semibold text-ink">Thanh toán thành công</Text>
+      <View className="flex-row items-center gap-2">
+        <ActivityIndicator size="small" color={COLORS.inkMuted} />
+        <Text className="text-sm text-ink-muted">Đang mở đơn hàng…</Text>
+      </View>
     </View>
   );
 }

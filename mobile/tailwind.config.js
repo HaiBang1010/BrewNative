@@ -40,11 +40,12 @@ module.exports = {
       // One family per weight, named by each file's PostScript name (see app/_layout.tsx).
       // Don't use these directly: components/ui/text.tsx maps font-semibold etc. to them.
       fontFamily: {
-        'sora-light': ['Sora-Light'],
-        sora: ['Sora-Regular'],
-        'sora-medium': ['Sora-Medium'],
-        'sora-semibold': ['Sora-SemiBold'],
-        'sora-bold': ['Sora-Bold'],
+        // Be Vietnam Pro (the Figma design uses Sora, which has no Vietnamese letters).
+        'app-light': ['BeVietnamPro-Light'],
+        app: ['BeVietnamPro-Regular'],
+        'app-medium': ['BeVietnamPro-Medium'],
+        'app-semibold': ['BeVietnamPro-SemiBold'],
+        'app-bold': ['BeVietnamPro-Bold'],
       },
     },
   },

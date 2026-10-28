@@ -243,8 +243,9 @@ def main():
     # Icon: cup with steam on the brand color. Dark coffee so it reads on brown.
     icon_art = cup_svg(coffee=BRAND_DARK) + steam_svg(CREAM)
     rasterize(svg(icon_art, BRAND, scale=1.25, size=1024), os.path.join(ASSETS, 'icon.png'), 1024)
-    # Android masks the adaptive icon to a circle/squircle: keep the art in the middle 66%.
-    rasterize(svg(icon_art, BRAND, scale=0.95, size=1024),
+    # Android masks the adaptive icon to a circle/squircle and only guarantees the middle
+    # 66% (a circle 66/108 wide): at 0.75 the saucer's ends and the steam stay inside it.
+    rasterize(svg(icon_art, BRAND, scale=0.75, size=1024),
               os.path.join(ASSETS, 'android-icon-foreground.png'), 1024)
     rasterize(svg('', BRAND, size=1024), os.path.join(ASSETS, 'android-icon-background.png'), 1024)
 
