@@ -11,12 +11,13 @@ import {
 } from '@expo-google-fonts/sora';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
+import { useCallback, useState } from 'react';
+import { AnimatedSplash } from '@/components/animated-splash';
 import { AppProviders } from '@/lib/app-providers';
 import { useAuth } from '@/lib/auth-provider';
 
-// Keep the splash screen up until we know whether the user is signed in
-// and the font is loaded, so nothing flashes before the first real screen.
+// Keep the native splash up until React can draw: AnimatedSplash then takes over
+// with the same picture and hides it (see components/animated-splash.tsx).
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
@@ -52,27 +53,29 @@ export default function RootLayout() {
  */
 function RootNavigator() {
   const { isLoading, isSignedIn, isStaff } = useAuth();
-
-  // A side effect, so not in the render itself: once the first real screen has been rendered.
-  useEffect(() => {
-    if (!isLoading) SplashScreen.hide();
-  }, [isLoading]);
-
-  if (isLoading) return null;
+  // Only on a cold start: once it has faded out it isn't mounted again.
+  const [splashVisible, setSplashVisible] = useState(true);
+  const hideSplash = useCallback(() => setSplashVisible(false), []);
 
   const home = !isSignedIn ? '/login' : isStaff ? '/admin/orders' : '/';
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={isSignedIn && !isStaff} redirectTo={home}>
-        <Stack.Screen name="(app)" />
-      </Stack.Protected>
-      <Stack.Protected guard={isSignedIn && isStaff} redirectTo={home}>
-        <Stack.Screen name="admin" />
-      </Stack.Protected>
-      <Stack.Protected guard={!isSignedIn} redirectTo={home}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-    </Stack>
+    <>
+      {/* Screens appear under the splash as soon as the sign-in state is known. */}
+      {isLoading ? null : (
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Protected guard={isSignedIn && !isStaff} redirectTo={home}>
+            <Stack.Screen name="(app)" />
+          </Stack.Protected>
+          <Stack.Protected guard={isSignedIn && isStaff} redirectTo={home}>
+            <Stack.Screen name="admin" />
+          </Stack.Protected>
+          <Stack.Protected guard={!isSignedIn} redirectTo={home}>
+            <Stack.Screen name="(auth)" />
+          </Stack.Protected>
+        </Stack>
+      )}
+      {splashVisible ? <AnimatedSplash ready={!isLoading} onFinish={hideSplash} /> : null}
+    </>
   );
 }

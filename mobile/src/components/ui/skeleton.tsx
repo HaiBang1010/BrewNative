@@ -48,10 +48,8 @@ export function SkeletonGroup({ children, className, delay = DEFAULT_DELAY_MS }:
 
   useEffect(() => {
     if (!visible || reduceMotion) return;
-    pulse.value = withRepeat(
-      withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
+    pulse.set(
+      withRepeat(withTiming(1, { duration: 800, easing: Easing.inOut(Easing.ease) }), -1, true),
     );
     return () => cancelAnimation(pulse);
   }, [visible, reduceMotion, pulse]);
@@ -76,7 +74,7 @@ export function SkeletonGroup({ children, className, delay = DEFAULT_DELAY_MS }:
 export function Skeleton({ className = '', style }: { className?: string; style?: StyleProp<ViewStyle> }) {
   const pulse = use(PulseContext);
   const animatedStyle = useAnimatedStyle(() => ({
-    opacity: pulse ? 1 - pulse.value * 0.5 : 1,
+    opacity: pulse ? 1 - pulse.get() * 0.5 : 1,
   }));
 
   return <Animated.View className={`bg-line-light ${className}`} style={[animatedStyle, style]} />;

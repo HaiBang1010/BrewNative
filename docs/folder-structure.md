@@ -32,6 +32,8 @@ mobile/
 │   │   ├── chat/chat-scroll-view.tsx # Danh sách tin nhắn đi theo bàn phím (KeyboardChatScrollView)
 │   │   ├── staff-order-card.tsx  # Thẻ đơn của quán + hook chạy hành động (có hỏi lại khi hoàn tiền)
 │   │   ├── floating-tab-bar.tsx  # Tab bar nổi, chỉ có icon
+│   │   ├── animated-splash.tsx # Splash động (Lottie) nối tiếp splash native khi mở app
+│   │   ├── order-list-skeleton.tsx # Khung chờ của danh sách đơn
 │   │   └── cart-button.tsx     # Icon giỏ hàng có badge (header màn Menu, ô vuông cạnh ô tìm kiếm ở Trang chủ)
 │   ├── hooks/                  # Hook React: thêm cache (TanStack Query) cho services/
 │   │   ├── queries.ts          # useMe, useMenu, useOrders... và useCreateOrder, useCancelOrder
@@ -86,6 +88,8 @@ mobile/
 │   │   └── theme.ts            # COLORS, FONTS cho prop không nhận className (màu icon, tintColor, header)
 │   └── global.css              # Tailwind; import một lần ở app/_layout.tsx
 ├── assets/                     # Icon, splash, ảnh tĩnh (images/figma/: ảnh lấy từ thiết kế Figma)
+│   └── animations/brew-splash.json # Animation Lottie của splash
+├── scripts/brand/generate.py   # Sinh icon, ảnh splash và file Lottie từ cùng một hình (xem "Splash" bên dưới)
 ├── app.json                    # Cấu hình Expo: tên, bundle id, scheme "brew", plugin
 ├── babel.config.js             # NativeWind (biến className thành style)
 ├── metro.config.js             # NativeWind đọc src/global.css
@@ -125,6 +129,18 @@ Thư mục trong ngoặc như `(auth)`, `(app)`, `(tabs)` là **nhóm**: dùng �
 đường dẫn. Deep link: `brew://orders/123` (bản build thật) hoặc `exp://<IP>:8081/--/orders/123` (Expo Go).
 
 Các màn hình lấy dữ liệu thật từ backend (`EXPO_PUBLIC_API_URL` trong `.env`).
+
+**Splash** gồm 2 lớp nối liền nhau:
+1. **Native splash** (`expo-splash-screen` trong `app.json`): hệ điều hành hiện ngay khi bấm icon, lúc JS chưa chạy.
+   Chỉ là ảnh tĩnh: `assets/splash.png` trên nền `#050505`.
+2. **Splash động** (`components/animated-splash.tsx`, Lottie): vẽ bằng React, khung đầu **giống hệt** ảnh native
+   (cùng kích thước 200, cùng vị trí giữa màn hình), nên khi gọi `SplashScreen.hide()` không thấy gì thay đổi.
+   Sau đó hơi nước bốc lên từ ly, chữ "Brew" hiện dần (~1,4 giây), trong lúc app vẫn đọc trạng thái đăng nhập.
+   Splash mờ dần khi **cả** animation **và** app đã xong. Bật "Giảm chuyển động" thì bỏ animation, chỉ mờ dần.
+   Chỉ chạy khi mở app từ đầu, không chạy khi quay lại từ chạy nền.
+
+Ảnh splash, file Lottie và icon app được sinh từ cùng một bộ hình bằng `python3 scripts/brand/generate.py`
+(chạy trong `mobile/`, cần macOS). Đổi hình thì sửa script, chạy lại, rồi build lại app (splash và icon là native).
 
 **Push notification** (khi app chạy nền hoặc đã tắt; WebSocket chỉ chạy khi app đang mở). Backend gửi qua Expo Push
 (`backend/src/push`): khách nhận "quán đã nhận đơn", "đồ uống đã sẵn sàng", "đơn bị hủy" và tin chat; quán nhận

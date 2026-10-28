@@ -12,6 +12,8 @@ export const COLORS = {
   line: '#E3E3E3',
   surface: '#F9F9F9',
   white: '#FFFFFF',
+  /** Splash and login background; same as the native splash in app.json. */
+  night: '#050505',
   success: '#36C07E',
   danger: '#EF4444',
   /** Placeholder behind an image while it loads. */
