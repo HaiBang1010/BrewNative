@@ -13,6 +13,13 @@ export function formatDateTime(iso: string): string {
   });
 }
 
+/** How many options of a group the customer picks, e.g. "Bắt buộc, chọn 1". */
+export function optionGroupRule({ minSelect, maxSelect }: { minSelect: number; maxSelect: number }): string {
+  if (minSelect === 0) return `Tùy chọn, tối đa ${maxSelect}`;
+  if (minSelect === maxSelect) return `Bắt buộc, chọn ${minSelect}`;
+  return `Chọn ${minSelect}–${maxSelect}`;
+}
+
 export const ORDER_STATUS_LABEL: Record<OrderStatus, string> = {
   pending_payment: 'Chờ thanh toán',
   paid: 'Đã thanh toán',

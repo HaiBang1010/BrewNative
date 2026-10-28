@@ -34,14 +34,16 @@ export function createApiClient(options: {
     accessToken: string | undefined,
     opts: RequestOptions,
   ) {
+    // A FormData body (file upload) is sent as is: fetch sets the multipart Content-Type itself.
+    const isForm = opts.body instanceof FormData;
     return fetch(`${baseUrl}${path}`, {
       method,
       headers: {
         Accept: 'application/json',
-        ...(opts.body !== undefined && { 'Content-Type': 'application/json' }),
+        ...(opts.body !== undefined && !isForm && { 'Content-Type': 'application/json' }),
         ...(accessToken && { Authorization: `Bearer ${accessToken}` }),
       },
-      body: opts.body === undefined ? undefined : JSON.stringify(opts.body),
+      body: opts.body === undefined ? undefined : isForm ? (opts.body as FormData) : JSON.stringify(opts.body),
       signal: opts.signal,
     });
   }

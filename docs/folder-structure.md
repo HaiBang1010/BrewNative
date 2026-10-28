@@ -26,8 +26,9 @@ mobile/
 ├── src/
 │   ├── app/                    # Mỗi file là một màn hình (route). Xem bảng bên dưới
 │   ├── components/
-│   │   ├── ui/                 # Text (font Sora), Button, TextField, Chip, QuantityStepper, LoadingView...
+│   │   ├── ui/                 # Text (font Sora), Button, TextField, PriceField, SwitchRow, Chip, QuantityStepper, LoadingView...
 │   │   ├── menu/               # ProductCard (ô lưới 2 cột), CategoryChips, PromoBanner
+│   │   ├── admin-menu/         # Quản lý menu: dòng món có công tắc còn hàng, chọn ảnh, dòng tuỳ chọn, khung form
 │   │   ├── chat/chat-thread.tsx  # Giao diện chat dùng chung cho khách và quán
 │   │   ├── chat/chat-scroll-view.tsx # Danh sách tin nhắn đi theo bàn phím (KeyboardChatScrollView)
 │   │   ├── staff-order-card.tsx  # Thẻ đơn của quán + hook chạy hành động (có hỏi lại khi hoàn tiền)
@@ -41,6 +42,8 @@ mobile/
 │   │   ├── cart-check.ts       # useCartCheck: so giỏ hàng với menu hiện tại (giá mới, món/tùy chọn đã hết)
 │   │   ├── chat.ts             # useChatMessages (cuộn lên tải thêm), useSendMessage, useChatSummary
 │   │   ├── staff.ts            # Màn quán: useStaffOrders, useUpdateOrderStatus, useStaffConversations...
+│   │   ├── admin-menu.ts       # Quản lý menu: danh mục, món (kèm upload ảnh), nhóm tuỳ chọn
+│   │   ├── discard-guard.ts    # useDiscardGuard: hỏi "Bỏ thay đổi?" khi rời form chưa lưu
 │   │   └── status-bar.ts       # useLightStatusBar: chữ status bar màu trắng cho màn có nền tối
 │   ├── services/               # Gọi ra bên ngoài: backend, keychain, Google
 │   │   ├── api-client.ts       # fetch + token + tự refresh khi 401 (1 lần refresh cùng lúc)
@@ -51,6 +54,7 @@ mobile/
 │   │   ├── order.service.ts    # /orders và thanh toán
 │   │   ├── chat.service.ts     # /chat; gửi tin qua WebSocket, không trả lời thì gửi qua REST
 │   │   ├── staff.service.ts    # /admin: đơn hàng, đổi trạng thái, chat với khách
+│   │   ├── admin-menu.service.ts # /admin/categories, /admin/products (+ ảnh), /admin/option-groups, /admin/options
 │   │   ├── socket.ts           # Kết nối Socket.IO duy nhất của app
 │   │   ├── notifications.ts    # expo-notifications: xin quyền, push token, bấm vào thông báo
 │   │   └── google-sign-in.ts   # SDK Google Sign-In
@@ -81,6 +85,7 @@ mobile/
 │   │   ├── uuid.ts             # clientId cho tin nhắn
 │   │   ├── jwt.ts              # Đọc role trong access token (không xác minh; backend mới xác minh)
 │   │   ├── staff-orders.ts     # Nút hành động cho từng trạng thái đơn (khớp quy tắc backend), các tab
+│   │   ├── admin-menu.ts       # Form quản lý menu: kiểm tra dữ liệu, tính các request khi lưu nhóm tuỳ chọn
 │   │   ├── search.ts           # Tìm món không phân biệt dấu ("ca phe" ra "Cà phê")
 │   │   ├── order-progress.ts   # Thanh tiến trình 4 bước và câu mô tả từng trạng thái đơn
 │   │   └── notification-route.ts # Bấm thông báo thì mở màn nào (khách / quán)
@@ -120,9 +125,14 @@ mobile/
 | `(app)/chat.tsx` | `/chat` | Chat với quán |
 | `admin/(tabs)/orders.tsx` | `/admin/orders` | **Quán:** hàng đợi đơn theo trạng thái, nút cho bước tiếp theo |
 | `admin/(tabs)/chats.tsx` | `/admin/chats` | **Quán:** danh sách khách đang chat, số tin chưa đọc |
+| `admin/(tabs)/menu.tsx` | `/admin/menu` | **Admin:** cả menu theo danh mục, tìm món, công tắc còn hàng/hết hàng |
 | `admin/(tabs)/account.tsx` | `/admin/account` | **Quán:** tài khoản, đăng xuất |
 | `admin/orders/[id].tsx` | `/admin/orders/:id` | **Quán:** chi tiết đơn, khách, ghi chú, thanh toán |
 | `admin/chats/[id].tsx` | `/admin/chats/:id` | **Quán:** chat với một khách |
+| `admin/menu/categories/index.tsx` | `/admin/menu/categories` | **Admin:** danh sách danh mục |
+| `admin/menu/categories/[id].tsx` | `/admin/menu/categories/:id` | **Admin:** thêm (`new`), đổi tên, thứ tự, xoá danh mục |
+| `admin/menu/products/[id].tsx` | `/admin/menu/products/:id` | **Admin:** thêm (`new`, `?categoryId=`) hoặc sửa món: ảnh, giá, danh mục, nhóm tuỳ chọn |
+| `admin/menu/option-groups/[id].tsx` | `/admin/menu/option-groups/:id?productId=` | **Admin:** một nhóm tuỳ chọn (Size...) và các lựa chọn |
 | `+not-found.tsx` | | Đường dẫn không tồn tại |
 
 Thư mục trong ngoặc như `(auth)`, `(app)`, `(tabs)` là **nhóm**: dùng để gom màn hình và layout, không xuất hiện trong
@@ -179,6 +189,21 @@ trên màn giỏ hàng.
 - Đóng PaymentSheet hoặc lỗi: app hủy đơn nháp, **giỏ hàng giữ nguyên**.
 - Đơn nháp (chưa từng được trả) không hiện trong tab Đơn hàng.
 
+**Quản lý menu** (tab Menu, chỉ tài khoản **admin**; nhân viên không thấy tab này và backend cũng trả 403):
+- Danh sách món theo danh mục, có cả món hết hàng. Công tắc trên mỗi dòng đổi Còn hàng/Hết hàng ngay
+  (đổi trên màn trước, request lỗi thì trả lại như cũ).
+- Món mới: điền thông tin rồi Lưu, sau đó mới thêm nhóm tuỳ chọn (nhóm cần id của món). Ảnh chọn từ thư viện
+  (`expo-image-picker`, cắt vuông), **tải lên khi bấm Lưu** (`POST /admin/products/:id/image`, multipart).
+  Ảnh được thêm vào FormData bằng `new File(uri)` của `expo-file-system`, **không** dùng `{ uri, name, type }` như
+  React Native cũ: từ SDK 58, `fetch` toàn cục là `expo/fetch`, chỉ gửi được Blob/File (lỗi
+  "Unsupported FormDataPart implementation").
+- Nhóm tuỳ chọn: sửa cả nhóm rồi Lưu một lần. `planOptionChanges` so với bản đã lưu để chỉ gửi những gì đổi
+  (xoá dòng bị bỏ, sửa dòng đổi, tạo dòng mới; thứ tự trên màn = `sortOrder`).
+- Form chưa lưu mà bấm quay lại thì hỏi "Bỏ thay đổi?" (`useDiscardGuard`).
+- Xoá danh mục chỉ được khi danh mục không còn món. Xoá món không ảnh hưởng đơn cũ (đơn giữ tên và giá đã bán).
+- Lưu xong, máy này tải lại menu ngay. Máy khác thấy menu mới ở lần tải lại sau; giỏ hàng luôn kiểm tra giá
+  mới trước khi thanh toán.
+
 ### Kiểm tra code
 
 ```bash
@@ -192,6 +217,7 @@ Test đặt cạnh code trong `__tests__/` (ví dụ `utils/__tests__/cart-prici
 vì Expo Router coi mọi file ở đó là một màn hình. Đang có test cho:
 - `utils/cart-pricing.ts`: chọn tùy chọn, tính giá, kiểm tra dòng trong giỏ;
 - `utils/chat-cache.ts`: tin nhắn đến hai lần không bị trùng;
+- `utils/admin-menu.ts`: kiểm tra form món và nhóm tuỳ chọn, các request khi lưu nhóm tuỳ chọn;
 - `services/api-client.ts`: với một backend giả **đổi refresh token sau mỗi lần dùng**, nhiều request cùng bị
   401 chỉ gây ra **một** lần refresh. Nếu refresh chạy song song, refresh token bị dùng lại và backend thật sẽ
   coi là bị đánh cắp, đăng xuất khách khỏi mọi thiết bị.

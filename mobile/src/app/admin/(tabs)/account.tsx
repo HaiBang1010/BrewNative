@@ -31,7 +31,9 @@ export default function StaffAccountScreen() {
         </Text>
       </View>
       <Text className="text-center text-sm text-ink-muted">
-        Quản lý menu, cửa hàng và tài khoản: dùng trang Swagger của backend (/api/docs).
+        {me.role === 'admin'
+          ? 'Sửa món và danh mục ở tab Menu. Cửa hàng và tài khoản nhân viên: dùng trang Swagger của backend (/api/docs).'
+          : 'Menu, cửa hàng và tài khoản do quản trị viên quản lý.'}
       </Text>
       <Button
         title="Đăng xuất"

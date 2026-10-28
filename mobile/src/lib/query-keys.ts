@@ -16,4 +16,8 @@ export const queryKeys = {
   staffOrder: (id: string) => ['admin', 'order', id] as const,
   staffConversations: ['admin', 'conversations'] as const,
   staffMessages: (conversationId: string) => ['admin', 'messages', conversationId] as const,
+  // Menu management (admins only).
+  adminCategories: ['admin', 'categories'] as const,
+  adminProducts: ['admin', 'products'] as const,
+  adminProduct: (id: string) => ['admin', 'product', id] as const,
 };

@@ -67,6 +67,39 @@ export type Category = {
   products: Product[];
 };
 
+/** A category without its products (GET /admin/categories). */
+export type CategorySummary = Omit<Category, 'products'>;
+
+/** Bodies of the admin menu endpoints (backend/src/menu/dto/menu.dto.ts). PATCH takes any subset. */
+export type CategoryInput = {
+  name: string;
+  sortOrder?: number;
+};
+
+export type ProductInput = {
+  categoryId: string;
+  name: string;
+  description?: string | null;
+  basePrice: number;
+  isAvailable?: boolean;
+  sortOrder?: number;
+};
+
+export type OptionGroupInput = {
+  name: string;
+  /** 0 = optional. */
+  minSelect: number;
+  maxSelect: number;
+  sortOrder?: number;
+};
+
+export type OptionInput = {
+  name: string;
+  priceDelta: number;
+  isAvailable?: boolean;
+  sortOrder?: number;
+};
+
 export type Store = {
   id: string;
   name: string;

@@ -65,6 +65,14 @@
           "color": "#C67C4E",
           "defaultChannel": "default"
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Brew cần truy cập ảnh để bạn chọn ảnh cho món trong menu.",
+          "cameraPermission": false,
+          "microphonePermission": false
+        }
       ]
     ],
     "experiments": {

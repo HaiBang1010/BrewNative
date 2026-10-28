@@ -18,7 +18,7 @@ import {
   toggleOption,
   unitPrice,
 } from '@/utils/cart-pricing';
-import { formatVnd } from '@/utils/format';
+import { formatVnd, optionGroupRule } from '@/utils/format';
 import { useProduct } from '@/hooks/queries';
 import { MAX_QUANTITY, useCart } from '@/stores/cart';
 import type { OptionGroup, ProductDetail } from '@/types/api';
@@ -151,12 +151,7 @@ function OptionGroupPicker({
   error: string | null;
   onToggle: (optionId: string) => void;
 }) {
-  const rule =
-    group.minSelect === 0
-      ? `Tùy chọn, tối đa ${group.maxSelect}`
-      : group.minSelect === group.maxSelect
-        ? `Bắt buộc, chọn ${group.minSelect}`
-        : `Chọn ${group.minSelect}–${group.maxSelect}`;
+  const rule = optionGroupRule(group);
   const inline = group.options.length <= MAX_INLINE_OPTIONS;
 
   return (

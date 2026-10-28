@@ -81,6 +81,17 @@ describe('createApiClient', () => {
     expect(loginInit.body).toBe(JSON.stringify({ email: 'a' }));
   });
 
+  it('sends a FormData body (image upload) as is, without the JSON content type', async () => {
+    const { api, backend } = setup();
+    const form = new FormData();
+    form.append('file', 'image-bytes');
+    await api.post('/admin/products/p/image', form);
+
+    const [, init] = backend.fetchMock.mock.calls[0];
+    expect(init.body).toBe(form);
+    expect((init.headers as Record<string, string>)['Content-Type']).toBeUndefined();
+  });
+
   it('refreshes once on 401, saves the new tokens and retries the request', async () => {
     const { api, backend, tokens } = setup();
     // The access token expired; the refresh token is still valid.

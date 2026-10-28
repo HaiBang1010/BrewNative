@@ -11,6 +11,11 @@ const KNOWN_MESSAGES: Record<string, string> = {
   'Order is not awaiting payment': 'Đơn này không còn chờ thanh toán',
   'A payment for this order is already being processed':
     'Đơn đang được thanh toán nên không hủy được',
+  'Category still has products; move or delete them first':
+    'Danh mục còn món: chuyển các món sang danh mục khác hoặc xoá chúng trước',
+  'Only JPEG, PNG, WebP or HEIC images are allowed': 'Chỉ nhận ảnh JPEG, PNG, WebP hoặc HEIC',
+  'File too large': 'Ảnh quá lớn, chọn ảnh nhỏ hơn 5 MB',
+  'Forbidden resource': 'Tài khoản của bạn không có quyền làm việc này',
 };
 
 /** A message to show the user for any thrown error. */
@@ -18,6 +23,8 @@ export function errorMessage(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 429) return 'Bạn thao tác nhanh quá, đợi một chút rồi thử lại';
     if (error.status >= 500) return 'Máy chủ đang gặp sự cố, thử lại sau';
+    // A category's slug comes from its name: "Trà" and "Tra" clash.
+    if (/^Slug ".*" is already used$/.test(error.message)) return 'Đã có danh mục trùng tên này';
     return KNOWN_MESSAGES[error.message] ?? error.messages.join('\n');
   }
   // fetch() throws a TypeError when the server can't be reached at all.
