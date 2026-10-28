@@ -1,0 +1,40 @@
+# Render Blueprint: the Brew API as a free web service (database on Neon).
+# Render dashboard → New → Blueprint → pick this repo. Values marked `sync: false`
+# are asked once when the Blueprint is created; change them later in the service's
+# Environment tab. Steps and limits of the free plan: docs/release.md.
+services:
+  - type: web
+    name: brew-api
+    runtime: node
+    plan: free
+    region: singapore
+    rootDir: backend
+    # NODE_ENV=production also applies to the build: --include=dev keeps the Nest CLI.
+    buildCommand: npm ci --include=dev && npm run build
+    # No shell on the free plan: migrations and the (idempotent) seed run at every start.
+    startCommand: npm run start:render
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "24"
+      # Neon → Connection string (postgresql://…?sslmode=require).
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_ACCESS_SECRET
+        generateValue: true
+      # Comma-separated Google OAuth client IDs (web, iOS, Android).
+      - key: GOOGLE_CLIENT_IDS
+        sync: false
+      # Stripe test keys (sk_test_…, pk_test_…).
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_PUBLISHABLE_KEY
+        sync: false
+      # The admin account created on first start. Use a strong password.
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false
+      # PUBLIC_URL defaults to Render's https://….onrender.com URL.

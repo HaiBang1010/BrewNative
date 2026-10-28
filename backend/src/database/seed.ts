@@ -170,27 +170,48 @@ const STORES = [
   },
 ];
 
+const isProduction = process.env.NODE_ENV === 'production';
+
+/**
+ * Locally: an admin with a default password plus demo staff/customer accounts.
+ * In production: only the admin, from SEED_ADMIN_EMAIL / SEED_ADMIN_PASSWORD
+ * (skipped if they're missing); no accounts with publicly known passwords.
+ * Passwords are never logged in production (hosting logs are readable by others).
+ */
 async function seedUsers() {
   const users = dataSource.getRepository(User);
+  const adminEmail = process.env.SEED_ADMIN_EMAIL;
+  const adminPassword = process.env.SEED_ADMIN_PASSWORD;
+  if (isProduction && (!adminEmail || !adminPassword)) {
+    console.warn('  skip admin: set SEED_ADMIN_EMAIL and SEED_ADMIN_PASSWORD');
+  }
   const accounts = [
-    {
-      email: (process.env.SEED_ADMIN_EMAIL ?? 'admin@brew.local').toLowerCase(),
-      password: process.env.SEED_ADMIN_PASSWORD ?? 'Admin@12345',
-      fullName: 'Brew Admin',
-      role: UserRole.Admin,
-    },
-    {
-      email: 'staff@brew.local',
-      password: DEMO_PASSWORD,
-      fullName: 'Nhân viên Brew',
-      role: UserRole.Staff,
-    },
-    {
-      email: 'customer@brew.local',
-      password: DEMO_PASSWORD,
-      fullName: 'Khách hàng Demo',
-      role: UserRole.Customer,
-    },
+    ...(isProduction && (!adminEmail || !adminPassword)
+      ? []
+      : [
+          {
+            email: (adminEmail ?? 'admin@brew.local').toLowerCase(),
+            password: adminPassword ?? 'Admin@12345',
+            fullName: 'Brew Admin',
+            role: UserRole.Admin,
+          },
+        ]),
+    ...(isProduction
+      ? []
+      : [
+          {
+            email: 'staff@brew.local',
+            password: DEMO_PASSWORD,
+            fullName: 'Nhân viên Brew',
+            role: UserRole.Staff,
+          },
+          {
+            email: 'customer@brew.local',
+            password: DEMO_PASSWORD,
+            fullName: 'Khách hàng Demo',
+            role: UserRole.Customer,
+          },
+        ]),
   ];
   for (const account of accounts) {
     if (await users.existsBy({ email: account.email })) {
@@ -206,7 +227,9 @@ async function seedUsers() {
       }),
     );
     console.log(
-      `  user ${account.email} / ${account.password} (${account.role})`,
+      isProduction
+        ? `  user ${account.email} (${account.role})`
+        : `  user ${account.email} / ${account.password} (${account.role})`,
     );
   }
 }
@@ -296,10 +319,11 @@ async function seedMenu() {
 async function seedProductImages() {
   const dir = join(process.cwd(), 'seed-images', 'products');
   if (!existsSync(dir)) return;
-  const publicUrl = (process.env.PUBLIC_URL ?? 'http://localhost:3100').replace(
-    /\/$/,
-    '',
-  );
+  const publicUrl = (
+    process.env.PUBLIC_URL ||
+    process.env.RENDER_EXTERNAL_URL ||
+    'http://localhost:3100'
+  ).replace(/\/$/, '');
   const target = join(UPLOADS_DIR, 'products');
   mkdirSync(target, { recursive: true });
 
@@ -310,10 +334,19 @@ async function seedProductImages() {
   let count = 0;
   for (const file of readdirSync(dir)) {
     const product = bySlug.get(file.slice(0, -extname(file).length));
-    if (!product || !isPlaceholder(product.imageUrl)) continue;
+    if (!product) continue;
     const name = `seed-${file}`;
+    const url = `${publicUrl}/uploads/products/${name}`;
+    // Hosts with a temporary disk (Render Free) lose uploads/ on every restart:
+    // copy the photo back when the product still points to it.
+    if (product.imageUrl === url) {
+      if (!existsSync(join(target, name)))
+        copyFileSync(join(dir, file), join(target, name));
+      continue;
+    }
+    if (!isPlaceholder(product.imageUrl)) continue;
     copyFileSync(join(dir, file), join(target, name));
-    product.imageUrl = `${publicUrl}/uploads/products/${name}`;
+    product.imageUrl = url;
     await products.save(product);
     count++;
   }

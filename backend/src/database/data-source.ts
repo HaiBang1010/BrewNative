@@ -14,6 +14,7 @@ const env = process.env as Record<string, string>;
 
 export default new DataSource({
   ...buildDatabaseOptions({
+    DATABASE_URL: env.DATABASE_URL || undefined,
     DB_HOST: env.DB_HOST ?? 'localhost',
     DB_PORT: env.DB_PORT ?? 5440,
     DB_USER: env.DB_USER,

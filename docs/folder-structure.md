@@ -34,6 +34,7 @@ mobile/
 │   │   ├── staff-order-card.tsx  # Thẻ đơn của quán + hook chạy hành động (có hỏi lại khi hoàn tiền)
 │   │   ├── floating-tab-bar.tsx  # Tab bar nổi, chỉ có icon
 │   │   ├── animated-splash.tsx # Splash động (Lottie) nối tiếp splash native khi mở app
+│   │   ├── offline-banner.tsx  # Thông báo "Không có kết nối mạng" / "Đã kết nối lại" ở đầu màn hình
 │   │   ├── order-list-skeleton.tsx # Khung chờ của danh sách đơn
 │   │   └── cart-button.tsx     # Icon giỏ hàng có badge (header màn Menu, ô vuông cạnh ô tìm kiếm ở Trang chủ)
 │   ├── hooks/                  # Hook React: thêm cache (TanStack Query) cho services/
@@ -68,7 +69,7 @@ mobile/
 │   │   ├── catalog-cache.ts    # Tải lại mọi dữ liệu menu / cửa hàng trong cache
 │   │   ├── push-provider.tsx   # Đăng ký push token khi đăng nhập; bấm thông báo → mở đơn / chat
 │   │   ├── nativewind-interop.ts # Cho component của thư viện khác dùng được className
-│   │   ├── query-client.ts     # Cấu hình TanStack Query
+│   │   ├── query-client.ts     # Cấu hình TanStack Query; nối NetInfo (có mạng hay không), useIsOnline
 │   │   ├── query-keys.ts       # Khóa cache dùng chung
 │   │   └── stripe.ts           # Publishable key, URL quay lại app của Stripe
 │   ├── stores/
@@ -94,7 +95,8 @@ mobile/
 │   │   ├── search.ts           # Tìm món không phân biệt dấu ("ca phe" ra "Cà phê")
 │   │   ├── order-progress.ts   # Thanh tiến trình 4 bước và câu mô tả từng trạng thái đơn
 │   │   ├── notification-route.ts # Bấm thông báo thì mở màn nào (khách / quán)
-│   │   └── app-resume.ts       # Mốc thời gian vắng app: tải lại dữ liệu / chạy lại splash
+│   │   ├── app-resume.ts       # Mốc thời gian vắng app: tải lại dữ liệu / chạy lại splash
+│   │   └── network.ts          # Khi nào coi là có mạng (từ NetInfo)
 │   ├── constants/
 │   │   └── theme.ts            # COLORS, FONTS cho prop không nhận className (màu icon, tintColor, header)
 │   └── global.css              # Tailwind; import một lần ở app/_layout.tsx
@@ -170,7 +172,7 @@ App ở nền (về màn hình chính, chưa vuốt tắt) vẫn giữ màn hìn
   nếu đang có đơn chưa lấy; quán: Đơn hàng) và tải lại mọi dữ liệu. Người dùng thấy như mở lại app, nhưng JS
   không chạy lại nên giỏ hàng và đăng nhập vẫn giữ.
 
-Đang để 2 phút / 4 phút để thử; bản thật dự kiến 20 phút / 1 giờ. App bị hệ điều hành tắt hẳn thì lần sau là
+Hiện là 20 phút / 1 giờ (muốn thử nhanh thì tạm hạ xuống vài phút). App bị hệ điều hành tắt hẳn thì lần sau là
 cold start, không qua bước này.
 
 **Push notification** (khi app chạy nền hoặc đã tắt; WebSocket chỉ chạy khi app đang mở). Backend gửi qua Expo Push
@@ -202,6 +204,11 @@ Thử nhanh: đăng nhập tài khoản quán trên máy Android (được hỏi
 - Bản dev: push tới đúng lúc app vừa mở và còn đang tải JS thì không hiện (chưa có ai trả lời
   `setNotificationHandler`). Bản phát hành tải JS ngay nên gần như không gặp.
 
+**Mất mạng** (`@react-native-community/netinfo`): `lib/query-client.ts` báo cho TanStack Query khi máy mất hoặc
+có lại mạng. Mất mạng thì các query tạm dừng (không hiện màn lỗi) và mutation chờ; có mạng lại thì tự tải lại và
+chạy tiếp. Đầu màn hình hiện "Không có kết nối mạng", rồi "Đã kết nối lại" một lúc. Giỏ hàng tắt nút Thanh toán khi
+mất mạng (thanh toán cần máy chủ và Stripe). Thêm món vào giỏ vẫn được vì giỏ lưu trên máy.
+
 **Realtime:** `lib/socket-provider.tsx` giữ WebSocket kết nối khi đã đăng nhập. Event `order:updated` làm màn đơn và
 danh sách đơn tự tải lại; `message:new` thêm tin vào màn chat; `conversation:read` cập nhật số tin chưa đọc. Token
 hết hạn thì refresh rồi kết nối lại; mỗi lần kết nối lại thì tải lại dữ liệu đang có trong cache, vì event phát ra
@@ -209,6 +216,8 @@ lúc mất kết nối không được gửi lại.
 
 **Từ bước giỏ hàng, app không chạy trên Expo Go nữa**: MMKV (giỏ hàng) và Google Sign-In là code native mà Expo Go
 không có. Dùng development build (`npm run ios` / `npm run android`).
+
+Build bản thật (production, lên store): xem [release.md](release.md).
 
 **Build Android** (emulator `Pixel_8`):
 ```bash

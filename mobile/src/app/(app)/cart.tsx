@@ -16,6 +16,7 @@ import { useCartCheck } from "@/hooks/cart-check";
 import { usePayOrder } from "@/hooks/payments";
 import { useCancelOrder, useCreateOrder, useStores } from "@/hooks/queries";
 import { usePush } from "@/lib/push-provider";
+import { useIsOnline } from "@/lib/query-client";
 import { MAX_QUANTITY, useCart, useCartTotal } from "@/stores/cart";
 import type { CartItem, CartLineCheck, PriceChange } from "@/types/cart";
 
@@ -29,6 +30,7 @@ export default function CartScreen() {
   const payOrder = usePayOrder();
   const cartCheck = useCartCheck();
   const push = usePush();
+  const online = useIsOnline();
   const [checkingOut, setCheckingOut] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Set once paid: the cart is emptied while the order screen slides in over this one.
@@ -209,7 +211,12 @@ export default function CartScreen() {
             </Text>
           </View>
         </View>
-        {error ? (
+        {/* Paying needs the server (order, price check, Stripe): say why before they try. */}
+        {!online ? (
+          <Text className="text-center text-sm text-red-500">
+            Không có mạng: kết nối lại để thanh toán
+          </Text>
+        ) : error ? (
           <Text className="text-center text-sm text-red-500">{error}</Text>
         ) : cartCheck.blockedCount > 0 ? (
           <Text className="text-center text-sm text-red-500">
@@ -220,7 +227,10 @@ export default function CartScreen() {
           title={cartCheck.isChecking ? "Đang kiểm tra giá…" : "Thanh toán"}
           loading={checkingOut}
           disabled={
-            !storeId || cartCheck.isChecking || cartCheck.blockedCount > 0
+            !online ||
+            !storeId ||
+            cartCheck.isChecking ||
+            cartCheck.blockedCount > 0
           }
           onPress={checkout}
         />

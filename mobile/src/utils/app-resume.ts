@@ -5,12 +5,11 @@ import type { Order, OrderStatus } from '@/types/api';
  * (in the background, not killed: a killed app cold-starts with the splash anyway).
  */
 
-// TESTING values. For release: REFRESH_AFTER_MS = 20 * MINUTE, RESTART_AFTER_MS = 60 * MINUTE.
 const MINUTE = 60_000;
 /** Away at least this long: refetch all data, stay on the same screen. */
-export const REFRESH_AFTER_MS = 2 * MINUTE;
+export const REFRESH_AFTER_MS = 20 * MINUTE;
 /** Away at least this long: splash again, back to the home screen, refetch all data. */
-export const RESTART_AFTER_MS = 4 * MINUTE;
+export const RESTART_AFTER_MS = 60 * MINUTE;
 
 export type ResumeAction = 'none' | 'refresh' | 'restart';
 

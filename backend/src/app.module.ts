@@ -31,11 +31,12 @@ import { UsersModule } from './users/users.module.js';
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
         ...buildDatabaseOptions({
-          DB_HOST: config.getOrThrow('DB_HOST'),
-          DB_PORT: config.getOrThrow('DB_PORT'),
-          DB_USER: config.getOrThrow('DB_USER'),
-          DB_PASSWORD: config.getOrThrow('DB_PASSWORD'),
-          DB_NAME: config.getOrThrow('DB_NAME'),
+          DATABASE_URL: config.get('DATABASE_URL') || undefined,
+          DB_HOST: config.get('DB_HOST'),
+          DB_PORT: config.get('DB_PORT'),
+          DB_USER: config.get('DB_USER'),
+          DB_PASSWORD: config.get('DB_PASSWORD'),
+          DB_NAME: config.get('DB_NAME'),
         }),
         autoLoadEntities: true,
       }),

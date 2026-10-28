@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo-google-fonts/be-vietnam-pro": "^0.4.1",
+    "@react-native-community/netinfo": "12.0.1",
     "@react-native-google-signin/google-signin": "^16.1.5",
     "@react-native-vector-icons/ionicons": "^14.0.0",
     "@stripe/stripe-react-native": "0.81.0",

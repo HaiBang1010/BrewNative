@@ -1,5 +1,13 @@
 import Joi from 'joi';
 
+/** Required unless DATABASE_URL gives the whole connection. */
+const requiredWithoutUrl = () =>
+  Joi.string().when('DATABASE_URL', {
+    is: Joi.string().min(1),
+    then: Joi.optional(),
+    otherwise: Joi.required(),
+  });
+
 export const envValidationSchema = Joi.object({
   NODE_ENV: Joi.string()
     .valid('development', 'test', 'production')
@@ -7,13 +15,21 @@ export const envValidationSchema = Joi.object({
   PORT: Joi.number().port().default(3100),
   // Base URL used to build links to uploaded files. Use the Mac's LAN IP
   // (e.g. http://192.168.0.13:3100) so images load on a real phone.
-  PUBLIC_URL: Joi.string().uri().default('http://localhost:3100'),
+  // On Render it defaults to the service's own https://….onrender.com URL.
+  PUBLIC_URL: Joi.string()
+    .uri()
+    .default(process.env.RENDER_EXTERNAL_URL || 'http://localhost:3100'),
 
+  // Either one connection string (hosted Postgres such as Neon, with
+  // ?sslmode=require) or the separate DB_* values (local Docker database).
+  DATABASE_URL: Joi.string()
+    .uri({ scheme: ['postgres', 'postgresql'] })
+    .allow(''),
   DB_HOST: Joi.string().default('localhost'),
   DB_PORT: Joi.number().port().default(5440),
-  DB_USER: Joi.string().required(),
-  DB_PASSWORD: Joi.string().required(),
-  DB_NAME: Joi.string().required(),
+  DB_USER: requiredWithoutUrl(),
+  DB_PASSWORD: requiredWithoutUrl(),
+  DB_NAME: requiredWithoutUrl(),
 
   JWT_ACCESS_SECRET: Joi.string().min(32).required(),
   // Short-lived on purpose (max 1 day): sockets are disconnected when it expires.

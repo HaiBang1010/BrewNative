@@ -1,7 +1,23 @@
-import { QueryClient, focusManager } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import NetInfo from '@react-native-community/netinfo';
+import { QueryClient, focusManager, onlineManager } from '@tanstack/react-query';
+import { useEffect, useSyncExternalStore } from 'react';
 import { AppState, Platform } from 'react-native';
 import { ApiError } from '@/utils/api-error';
+import { isOnline } from '@/utils/network';
+
+/**
+ * TanStack Query only knows the browser's online events; on a phone, NetInfo tells it.
+ * While offline, queries pause (no error screen) and mutations wait; back online,
+ * stale queries refetch and waiting mutations run.
+ */
+onlineManager.setEventListener((setOnline) =>
+  NetInfo.addEventListener((state) => setOnline(isOnline(state))),
+);
+
+/** Whether the device has internet right now (for the offline banner, the pay button...). */
+export function useIsOnline(): boolean {
+  return useSyncExternalStore(onlineManager.subscribe.bind(onlineManager), () => onlineManager.isOnline());
+}
 
 export const queryClient = new QueryClient({
   defaultOptions: {

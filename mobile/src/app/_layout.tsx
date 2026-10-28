@@ -12,6 +12,7 @@ import {
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AnimatedSplash } from '@/components/animated-splash';
+import { OfflineBanner } from '@/components/offline-banner';
 import { useAppSplash } from '@/hooks/app-resume';
 import { AppProviders } from '@/lib/app-providers';
 import { useAuth } from '@/lib/auth-provider';
@@ -74,6 +75,7 @@ function RootNavigator() {
           </Stack.Protected>
         </Stack>
       )}
+      <OfflineBanner />
       {splash ? (
         <AnimatedSplash
           key={splash.key}
