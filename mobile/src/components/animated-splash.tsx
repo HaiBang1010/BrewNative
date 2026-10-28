@@ -28,18 +28,24 @@ const MAX_ANIMATION_MS = 2500;
 type AnimatedSplashProps = {
   /** The app knows which screen to show (fonts loaded, sign-in state read). */
   ready: boolean;
+  /**
+   * True on app launch: this splash takes over from the native one. False when it
+   * plays again after a long absence (hooks/app-resume.ts): there is no native splash then.
+   */
+  coldStart: boolean;
   /** Faded out: unmount this. */
   onFinish: () => void;
 };
 
 /**
- * Second half of the splash, drawn by React over the app on a cold start.
+ * Second half of the splash, drawn by React over the app on a cold start
+ * (and again after a long absence, see hooks/app-resume.ts).
  * 1. Takes over from the native splash with an identical first frame.
  * 2. Plays the Lottie animation (steam rises from the cup) while the app keeps loading.
  * 3. Fades out once both the animation and the app are done, never before the app is ready.
  * With "Reduce Motion" on, it skips the animation and only fades.
  */
-export function AnimatedSplash({ ready, onFinish }: AnimatedSplashProps) {
+export function AnimatedSplash({ ready, coldStart, onFinish }: AnimatedSplashProps) {
   const reduceMotion = useReducedMotion();
   const lottie = useRef<LottieView>(null);
   const [animationDone, setAnimationDone] = useState(reduceMotion);
@@ -63,7 +69,7 @@ export function AnimatedSplash({ ready, onFinish }: AnimatedSplashProps) {
 
   // Our first frame is on screen: now the native splash can go, then the animation starts.
   function handleLayout() {
-    SplashScreen.hide();
+    if (coldStart) SplashScreen.hide();
     if (!reduceMotion) lottie.current?.play();
   }
 

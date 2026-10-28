@@ -44,6 +44,7 @@ mobile/
 │   │   ├── staff.ts            # Màn quán: useStaffOrders, useUpdateOrderStatus, useStaffConversations...
 │   │   ├── admin-menu.ts       # Quản lý menu: danh mục, món (kèm upload ảnh), nhóm tuỳ chọn
 │   │   ├── discard-guard.ts    # useDiscardGuard: hỏi "Bỏ thay đổi?" khi rời form chưa lưu
+│   │   ├── app-resume.ts       # useAppSplash: splash lúc mở app và khi quay lại sau thời gian dài
 │   │   └── status-bar.ts       # useLightStatusBar: chữ status bar màu trắng cho màn có nền tối
 │   ├── services/               # Gọi ra bên ngoài: backend, keychain, Google
 │   │   ├── api-client.ts       # fetch + token + tự refresh khi 401 (1 lần refresh cùng lúc)
@@ -88,7 +89,8 @@ mobile/
 │   │   ├── admin-menu.ts       # Form quản lý menu: kiểm tra dữ liệu, tính các request khi lưu nhóm tuỳ chọn
 │   │   ├── search.ts           # Tìm món không phân biệt dấu ("ca phe" ra "Cà phê")
 │   │   ├── order-progress.ts   # Thanh tiến trình 4 bước và câu mô tả từng trạng thái đơn
-│   │   └── notification-route.ts # Bấm thông báo thì mở màn nào (khách / quán)
+│   │   ├── notification-route.ts # Bấm thông báo thì mở màn nào (khách / quán)
+│   │   └── app-resume.ts       # Mốc thời gian vắng app: tải lại dữ liệu / chạy lại splash
 │   ├── constants/
 │   │   └── theme.ts            # COLORS, FONTS cho prop không nhận className (màu icon, tintColor, header)
 │   └── global.css              # Tailwind; import một lần ở app/_layout.tsx
@@ -147,10 +149,21 @@ Các màn hình lấy dữ liệu thật từ backend (`EXPO_PUBLIC_API_URL` tro
    (cùng kích thước 200, cùng vị trí giữa màn hình), nên khi gọi `SplashScreen.hide()` không thấy gì thay đổi.
    Sau đó hơi nước bốc lên từ ly, chữ "Brew" hiện dần (~1,4 giây), trong lúc app vẫn đọc trạng thái đăng nhập.
    Splash mờ dần khi **cả** animation **và** app đã xong. Bật "Giảm chuyển động" thì bỏ animation, chỉ mờ dần.
-   Chỉ chạy khi mở app từ đầu, không chạy khi quay lại từ chạy nền.
+   Chạy khi mở app từ đầu (cold start), và khi quay lại sau thời gian dài ở nền (xem bên dưới).
 
 Ảnh splash, file Lottie và icon app được sinh từ cùng một bộ hình bằng `python3 scripts/brand/generate.py`
 (chạy trong `mobile/`, cần macOS). Đổi hình thì sửa script, chạy lại, rồi build lại app (splash và icon là native).
+
+**Quay lại app sau một thời gian ở nền** (`hooks/app-resume.ts`, mốc thời gian ở `utils/app-resume.ts`).
+App ở nền (về màn hình chính, chưa vuốt tắt) vẫn giữ màn hình cũ. Khi quay lại:
+- vắng dưới `REFRESH_AFTER_MS`: giữ nguyên (dữ liệu cũ hơn `staleTime` vẫn tự tải lại như mọi lần);
+- vắng từ `REFRESH_AFTER_MS`: tải lại **mọi** dữ liệu, giữ nguyên màn hình;
+- vắng từ `RESTART_AFTER_MS`: chạy lại splash Lottie, trong lúc đó về màn chính (khách: Trang chủ, hoặc màn đơn
+  nếu đang có đơn chưa lấy; quán: Đơn hàng) và tải lại mọi dữ liệu. Người dùng thấy như mở lại app, nhưng JS
+  không chạy lại nên giỏ hàng và đăng nhập vẫn giữ.
+
+Đang để 2 phút / 4 phút để thử; bản thật dự kiến 20 phút / 1 giờ. App bị hệ điều hành tắt hẳn thì lần sau là
+cold start, không qua bước này.
 
 **Push notification** (khi app chạy nền hoặc đã tắt; WebSocket chỉ chạy khi app đang mở). Backend gửi qua Expo Push
 (`backend/src/push`): khách nhận "quán đã nhận đơn", "đồ uống đã sẵn sàng", "đơn bị hủy" và tin chat; quán nhận
@@ -218,6 +231,7 @@ vì Expo Router coi mọi file ở đó là một màn hình. Đang có test cho
 - `utils/cart-pricing.ts`: chọn tùy chọn, tính giá, kiểm tra dòng trong giỏ;
 - `utils/chat-cache.ts`: tin nhắn đến hai lần không bị trùng;
 - `utils/admin-menu.ts`: kiểm tra form món và nhóm tuỳ chọn, các request khi lưu nhóm tuỳ chọn;
+- `utils/app-resume.ts`: vắng bao lâu thì làm gì, đơn nào đang chạy;
 - `services/api-client.ts`: với một backend giả **đổi refresh token sau mỗi lần dùng**, nhiều request cùng bị
   401 chỉ gây ra **một** lần refresh. Nếu refresh chạy song song, refresh token bị dùng lại và backend thật sẽ
   coi là bị đánh cắp, đăng xuất khách khỏi mọi thiết bị.

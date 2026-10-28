@@ -11,8 +11,8 @@ import {
 } from '@expo-google-fonts/sora';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useCallback, useState } from 'react';
 import { AnimatedSplash } from '@/components/animated-splash';
+import { useAppSplash } from '@/hooks/app-resume';
 import { AppProviders } from '@/lib/app-providers';
 import { useAuth } from '@/lib/auth-provider';
 
@@ -53,9 +53,8 @@ export default function RootLayout() {
  */
 function RootNavigator() {
   const { isLoading, isSignedIn, isStaff } = useAuth();
-  // Only on a cold start: once it has faded out it isn't mounted again.
-  const [splashVisible, setSplashVisible] = useState(true);
-  const hideSplash = useCallback(() => setSplashVisible(false), []);
+  // On a cold start, and again when the app comes back after a long absence.
+  const { splash, hideSplash } = useAppSplash({ isLoading, isSignedIn, isStaff });
 
   const home = !isSignedIn ? '/login' : isStaff ? '/admin/orders' : '/';
 
@@ -75,7 +74,14 @@ function RootNavigator() {
           </Stack.Protected>
         </Stack>
       )}
-      {splashVisible ? <AnimatedSplash ready={!isLoading} onFinish={hideSplash} /> : null}
+      {splash ? (
+        <AnimatedSplash
+          key={splash.key}
+          coldStart={splash.coldStart}
+          ready={splash.ready}
+          onFinish={hideSplash}
+        />
+      ) : null}
     </>
   );
 }

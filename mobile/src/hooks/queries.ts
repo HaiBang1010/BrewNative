@@ -1,4 +1,5 @@
 import {
+  queryOptions,
   useMutation,
   useQuery,
   useQueryClient,
@@ -50,11 +51,14 @@ export function useStores() {
   });
 }
 
+/** The customer's orders: for useOrders, and for code outside components (queryClient.fetchQuery). */
+export const ordersQuery = queryOptions({
+  queryKey: queryKeys.orders,
+  queryFn: ({ signal }) => orderService.list(signal),
+});
+
 export function useOrders() {
-  return useQuery({
-    queryKey: queryKeys.orders,
-    queryFn: ({ signal }) => orderService.list(signal),
-  });
+  return useQuery(ordersQuery);
 }
 
 export function useOrder(
