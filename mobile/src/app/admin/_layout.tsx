@@ -22,12 +22,15 @@ export default function AdminLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="orders/[id]" options={{ title: 'Đơn hàng' }} />
       <Stack.Screen name="chats/[id]" options={{ title: 'Khách hàng' }} />
-      {/* Menu management: admins only, like the Menu tab. */}
+      {/* Menu, stores and sales: admins only, like the Menu tab. */}
       <Stack.Protected guard={role === 'admin'} redirectTo="/admin/orders">
         <Stack.Screen name="menu/categories/index" options={{ title: 'Danh mục' }} />
         <Stack.Screen name="menu/categories/[id]" options={{ title: 'Danh mục' }} />
         <Stack.Screen name="menu/products/[id]" options={{ title: 'Món' }} />
         <Stack.Screen name="menu/option-groups/[id]" options={{ title: 'Nhóm tuỳ chọn' }} />
+        <Stack.Screen name="stats" options={{ title: 'Thống kê' }} />
+        <Stack.Screen name="stores/index" options={{ title: 'Cửa hàng' }} />
+        <Stack.Screen name="stores/[id]" options={{ title: 'Cửa hàng' }} />
       </Stack.Protected>
     </Stack>
   );

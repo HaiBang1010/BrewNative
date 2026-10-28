@@ -1,5 +1,6 @@
-import { useMutation, useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert } from 'react-native';
+import { refreshMenuQueries } from '@/lib/catalog-cache';
 import { queryKeys } from '@/lib/query-keys';
 import { adminMenuService, type LocalImage } from '@/services/admin-menu.service';
 import type { CategoryInput, OptionGroup, Product, ProductInput } from '@/types/api';
@@ -12,9 +13,8 @@ import {
 
 /**
  * Hooks for the admin menu screens (app/admin/menu). After any change, the
- * admin lists and the customer menu are refetched, so this device shows the
- * new menu everywhere. Other devices see it on their next menu refetch; the
- * cart always checks prices fresh before paying (hooks/cart-check.ts).
+ * admin lists and the customer menu are refetched on this device at once.
+ * Other devices refetch when the server sends menu:updated (lib/socket-provider.tsx).
  */
 
 /**
@@ -23,14 +23,6 @@ import {
  */
 function alertDeleteFailed(error: unknown) {
   Alert.alert('Không xoá được', errorMessage(error));
-}
-
-function refreshMenu(queryClient: QueryClient) {
-  void queryClient.invalidateQueries({ queryKey: queryKeys.adminCategories });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.adminProducts });
-  void queryClient.invalidateQueries({ queryKey: ['admin', 'product'] });
-  void queryClient.invalidateQueries({ queryKey: queryKeys.menu });
-  void queryClient.invalidateQueries({ queryKey: ['product'] });
 }
 
 export function useAdminCategories() {
@@ -64,7 +56,7 @@ export function useSaveCategory() {
   return useMutation({
     mutationFn: ({ id, input }: { id: string | null; input: CategoryInput }) =>
       id ? adminMenuService.updateCategory(id, input) : adminMenuService.createCategory(input),
-    onSuccess: () => refreshMenu(queryClient),
+    onSuccess: () => refreshMenuQueries(queryClient),
   });
 }
 
@@ -72,7 +64,7 @@ export function useDeleteCategory() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: adminMenuService.deleteCategory,
-    onSuccess: () => refreshMenu(queryClient),
+    onSuccess: () => refreshMenuQueries(queryClient),
     onError: alertDeleteFailed,
   });
 }
@@ -106,7 +98,7 @@ export function useSaveProduct() {
         return { product, imageError };
       }
     },
-    onSuccess: () => refreshMenu(queryClient),
+    onSuccess: () => refreshMenuQueries(queryClient),
   });
 }
 
@@ -127,7 +119,7 @@ export function useSetProductAvailable() {
     onError: (_error, _vars, context) => {
       queryClient.setQueryData(queryKeys.adminProducts, context?.previous);
     },
-    onSettled: () => refreshMenu(queryClient),
+    onSettled: () => refreshMenuQueries(queryClient),
   });
 }
 
@@ -137,7 +129,7 @@ export function useDeleteProduct() {
     mutationFn: adminMenuService.deleteProduct,
     onSuccess: (_data, id) => {
       queryClient.removeQueries({ queryKey: queryKeys.adminProduct(id) });
-      refreshMenu(queryClient);
+      refreshMenuQueries(queryClient);
     },
     onError: alertDeleteFailed,
   });
@@ -190,7 +182,7 @@ export function useSaveOptionGroup() {
         throw new PartialSaveError(error);
       }
     },
-    onSettled: () => refreshMenu(queryClient),
+    onSettled: () => refreshMenuQueries(queryClient),
   });
 }
 
@@ -198,7 +190,7 @@ export function useDeleteOptionGroup() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: adminMenuService.deleteOptionGroup,
-    onSuccess: () => refreshMenu(queryClient),
+    onSuccess: () => refreshMenuQueries(queryClient),
     onError: alertDeleteFailed,
   });
 }

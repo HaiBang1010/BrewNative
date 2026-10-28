@@ -1,6 +1,11 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import {
+  ServerEvent,
+  type CatalogUpdatedEvent,
+} from '../realtime/realtime.events.js';
+import { RealtimeService } from '../realtime/realtime.service.js';
 import type { CreateStoreDto, UpdateStoreDto } from './dto/store.dto.js';
 import { Store } from './entities/store.entity.js';
 
@@ -8,6 +13,7 @@ import { Store } from './entities/store.entity.js';
 export class StoresService {
   constructor(
     @InjectRepository(Store) private readonly stores: Repository<Store>,
+    private readonly realtime: RealtimeService,
   ) {}
 
   list(includeInactive = false): Promise<Store[]> {
@@ -25,13 +31,25 @@ export class StoresService {
     return store;
   }
 
-  create(dto: CreateStoreDto): Promise<Store> {
-    return this.stores.save(this.stores.create(dto));
+  async create(dto: CreateStoreDto): Promise<Store> {
+    const store = await this.stores.save(this.stores.create(dto));
+    this.storesChanged();
+    return store;
   }
 
   /** Stores are never deleted (orders reference them); set isActive=false instead. */
   async update(id: string, dto: UpdateStoreDto): Promise<Store> {
     const store = await this.get(id, true);
-    return this.stores.save(this.stores.merge(store, dto));
+    const saved = await this.stores.save(this.stores.merge(store, dto));
+    this.storesChanged();
+    return saved;
+  }
+
+  /** Tells every connected app to refetch the stores (stores:updated). */
+  private storesChanged(): void {
+    this.realtime.emitToAllSoon(
+      ServerEvent.StoresUpdated,
+      (): CatalogUpdatedEvent => ({ changedAt: new Date().toISOString() }),
+    );
   }
 }

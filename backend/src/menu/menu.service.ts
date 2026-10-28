@@ -7,6 +7,11 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { slugify } from '../common/utils/slugify.js';
+import {
+  ServerEvent,
+  type CatalogUpdatedEvent,
+} from '../realtime/realtime.events.js';
+import { RealtimeService } from '../realtime/realtime.service.js';
 import type {
   CreateCategoryDto,
   CreateOptionDto,
@@ -31,7 +36,21 @@ export class MenuService {
     @InjectRepository(OptionGroup)
     private readonly optionGroups: Repository<OptionGroup>,
     @InjectRepository(Option) private readonly options: Repository<Option>,
+    private readonly realtime: RealtimeService,
   ) {}
+
+  /**
+   * Waits for a change, then tells every connected app to refetch the menu
+   * (menu:updated). Debounced: one admin save can be several requests.
+   */
+  private async changed<T>(change: Promise<T>): Promise<T> {
+    const result = await change;
+    this.realtime.emitToAllSoon(
+      ServerEvent.MenuUpdated,
+      (): CatalogUpdatedEvent => ({ changedAt: new Date().toISOString() }),
+    );
+    return result;
+  }
 
   // ---------- Public ----------
 
@@ -68,7 +87,9 @@ export class MenuService {
   async createCategory(dto: CreateCategoryDto): Promise<Category> {
     const slug = dto.slug ?? slugify(dto.name);
     await this.assertSlugFree(slug);
-    return this.categories.save(this.categories.create({ ...dto, slug }));
+    return this.changed(
+      this.categories.save(this.categories.create({ ...dto, slug })),
+    );
   }
 
   async updateCategory(id: string, dto: UpdateCategoryDto): Promise<Category> {
@@ -76,7 +97,9 @@ export class MenuService {
     if (dto.slug && dto.slug !== category.slug) {
       await this.assertSlugFree(dto.slug);
     }
-    return this.categories.save(this.categories.merge(category, dto));
+    return this.changed(
+      this.categories.save(this.categories.merge(category, dto)),
+    );
   }
 
   async deleteCategory(id: string): Promise<void> {
@@ -86,7 +109,7 @@ export class MenuService {
         'Category still has products; move or delete them first',
       );
     }
-    await this.categories.delete(id);
+    await this.changed(this.categories.delete(id));
   }
 
   // ---------- Products ----------
@@ -100,7 +123,7 @@ export class MenuService {
 
   async createProduct(dto: CreateProductDto): Promise<Product> {
     await this.findCategory(dto.categoryId, BadRequestException);
-    return this.products.save(this.products.create(dto));
+    return this.changed(this.products.save(this.products.create(dto)));
   }
 
   async updateProduct(id: string, dto: UpdateProductDto): Promise<Product> {
@@ -108,19 +131,19 @@ export class MenuService {
     if (dto.categoryId && dto.categoryId !== product.categoryId) {
       await this.findCategory(dto.categoryId, BadRequestException);
     }
-    return this.products.save(this.products.merge(product, dto));
+    return this.changed(this.products.save(this.products.merge(product, dto)));
   }
 
   /** Past orders keep their copied name/price; their product_id becomes null. */
   async deleteProduct(id: string): Promise<void> {
     await this.findProduct(id);
-    await this.products.delete(id);
+    await this.changed(this.products.delete(id));
   }
 
   async setProductImage(id: string, imageUrl: string): Promise<Product> {
     const product = await this.findProduct(id);
     product.imageUrl = imageUrl;
-    return this.products.save(product);
+    return this.changed(this.products.save(product));
   }
 
   // ---------- Option groups ----------
@@ -131,8 +154,8 @@ export class MenuService {
   ): Promise<OptionGroup> {
     await this.findProduct(productId);
     assertSelectRange(dto.minSelect, dto.maxSelect);
-    return this.optionGroups.save(
-      this.optionGroups.create({ ...dto, productId }),
+    return this.changed(
+      this.optionGroups.save(this.optionGroups.create({ ...dto, productId })),
     );
   }
 
@@ -143,12 +166,12 @@ export class MenuService {
     const group = await this.findOptionGroup(id);
     const merged = this.optionGroups.merge(group, dto);
     assertSelectRange(merged.minSelect, merged.maxSelect);
-    return this.optionGroups.save(merged);
+    return this.changed(this.optionGroups.save(merged));
   }
 
   async deleteOptionGroup(id: string): Promise<void> {
     await this.findOptionGroup(id);
-    await this.optionGroups.delete(id);
+    await this.changed(this.optionGroups.delete(id));
   }
 
   // ---------- Options ----------
@@ -158,17 +181,19 @@ export class MenuService {
     dto: CreateOptionDto,
   ): Promise<Option> {
     await this.findOptionGroup(optionGroupId);
-    return this.options.save(this.options.create({ ...dto, optionGroupId }));
+    return this.changed(
+      this.options.save(this.options.create({ ...dto, optionGroupId })),
+    );
   }
 
   async updateOption(id: string, dto: UpdateOptionDto): Promise<Option> {
     const option = await this.options.findOneBy({ id });
     if (!option) throw new NotFoundException('Option not found');
-    return this.options.save(this.options.merge(option, dto));
+    return this.changed(this.options.save(this.options.merge(option, dto)));
   }
 
   async deleteOption(id: string): Promise<void> {
-    const { affected } = await this.options.delete(id);
+    const { affected } = await this.changed(this.options.delete(id));
     if (!affected) throw new NotFoundException('Option not found');
   }
 

@@ -13,10 +13,31 @@ import { STAFF_ROOM, userRoom } from './realtime.events.js';
 @Injectable()
 export class RealtimeService {
   private server: Server | null = null;
+  private readonly pending = new Map<string, NodeJS.Timeout>();
 
   /** Called once by RealtimeGateway when the Socket.IO server is ready. */
   attach(server: Server): void {
     this.server = server;
+  }
+
+  /** Every connected socket, signed in as anyone. */
+  emitToAll(event: string, payload: unknown): void {
+    this.server?.emit(event, payload);
+  }
+
+  /**
+   * emitToAll, at most once per `delayMs`: the last call wins. For changes that come
+   * in bursts, e.g. saving an option group is several requests but one menu change.
+   */
+  emitToAllSoon(event: string, payload: () => unknown, delayMs = 500): void {
+    clearTimeout(this.pending.get(event));
+    this.pending.set(
+      event,
+      setTimeout(() => {
+        this.pending.delete(event);
+        this.emitToAll(event, payload());
+      }, delayMs),
+    );
   }
 
   emitToUser(userId: string, event: string, payload: unknown): void {

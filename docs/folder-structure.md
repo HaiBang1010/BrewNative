@@ -43,6 +43,7 @@ mobile/
 │   │   ├── chat.ts             # useChatMessages (cuộn lên tải thêm), useSendMessage, useChatSummary
 │   │   ├── staff.ts            # Màn quán: useStaffOrders, useUpdateOrderStatus, useStaffConversations...
 │   │   ├── admin-menu.ts       # Quản lý menu: danh mục, món (kèm upload ảnh), nhóm tuỳ chọn
+│   │   ├── admin-shop.ts       # Cửa hàng, thống kê doanh thu
 │   │   ├── discard-guard.ts    # useDiscardGuard: hỏi "Bỏ thay đổi?" khi rời form chưa lưu
 │   │   ├── app-resume.ts       # useAppSplash: splash lúc mở app và khi quay lại sau thời gian dài
 │   │   └── status-bar.ts       # useLightStatusBar: chữ status bar màu trắng cho màn có nền tối
@@ -56,6 +57,7 @@ mobile/
 │   │   ├── chat.service.ts     # /chat; gửi tin qua WebSocket, không trả lời thì gửi qua REST
 │   │   ├── staff.service.ts    # /admin: đơn hàng, đổi trạng thái, chat với khách
 │   │   ├── admin-menu.service.ts # /admin/categories, /admin/products (+ ảnh), /admin/option-groups, /admin/options
+│   │   ├── admin-shop.service.ts # /admin/stores, /admin/stats/sales
 │   │   ├── socket.ts           # Kết nối Socket.IO duy nhất của app
 │   │   ├── notifications.ts    # expo-notifications: xin quyền, push token, bấm vào thông báo
 │   │   └── google-sign-in.ts   # SDK Google Sign-In
@@ -63,6 +65,7 @@ mobile/
 │   │   ├── app-providers.tsx   # Gom mọi provider; app/_layout.tsx chỉ dùng cái này
 │   │   ├── auth-provider.tsx   # AuthProvider / useAuth: trạng thái đăng nhập
 │   │   ├── socket-provider.tsx # Kết nối WebSocket khi đăng nhập; event của server → cập nhật cache
+│   │   ├── catalog-cache.ts    # Tải lại mọi dữ liệu menu / cửa hàng trong cache
 │   │   ├── push-provider.tsx   # Đăng ký push token khi đăng nhập; bấm thông báo → mở đơn / chat
 │   │   ├── nativewind-interop.ts # Cho component của thư viện khác dùng được className
 │   │   ├── query-client.ts     # Cấu hình TanStack Query
@@ -87,6 +90,7 @@ mobile/
 │   │   ├── jwt.ts              # Đọc role trong access token (không xác minh; backend mới xác minh)
 │   │   ├── staff-orders.ts     # Nút hành động cho từng trạng thái đơn (khớp quy tắc backend), các tab
 │   │   ├── admin-menu.ts       # Form quản lý menu: kiểm tra dữ liệu, tính các request khi lưu nhóm tuỳ chọn
+│   │   ├── admin-stores.ts     # Form cửa hàng: giờ mở cửa từng ngày, toạ độ
 │   │   ├── search.ts           # Tìm món không phân biệt dấu ("ca phe" ra "Cà phê")
 │   │   ├── order-progress.ts   # Thanh tiến trình 4 bước và câu mô tả từng trạng thái đơn
 │   │   ├── notification-route.ts # Bấm thông báo thì mở màn nào (khách / quán)
@@ -135,6 +139,9 @@ mobile/
 | `admin/menu/categories/[id].tsx` | `/admin/menu/categories/:id` | **Admin:** thêm (`new`), đổi tên, thứ tự, xoá danh mục |
 | `admin/menu/products/[id].tsx` | `/admin/menu/products/:id` | **Admin:** thêm (`new`, `?categoryId=`) hoặc sửa món: ảnh, giá, danh mục, nhóm tuỳ chọn |
 | `admin/menu/option-groups/[id].tsx` | `/admin/menu/option-groups/:id?productId=` | **Admin:** một nhóm tuỳ chọn (Size...) và các lựa chọn |
+| `admin/stats.tsx` | `/admin/stats` | **Admin:** doanh thu hôm nay / 7 / 30 ngày, biểu đồ theo ngày, món bán chạy, theo cửa hàng |
+| `admin/stores/index.tsx` | `/admin/stores` | **Admin:** danh sách cửa hàng (cả quán tạm đóng) |
+| `admin/stores/[id].tsx` | `/admin/stores/:id` | **Admin:** thêm (`new`) hoặc sửa cửa hàng: thông tin, toạ độ, tạm đóng, giờ mở cửa |
 | `+not-found.tsx` | | Đường dẫn không tồn tại |
 
 Thư mục trong ngoặc như `(auth)`, `(app)`, `(tabs)` là **nhóm**: dùng để gom màn hình và layout, không xuất hiện trong
@@ -214,8 +221,10 @@ trên màn giỏ hàng.
   (xoá dòng bị bỏ, sửa dòng đổi, tạo dòng mới; thứ tự trên màn = `sortOrder`).
 - Form chưa lưu mà bấm quay lại thì hỏi "Bỏ thay đổi?" (`useDiscardGuard`).
 - Xoá danh mục chỉ được khi danh mục không còn món. Xoá món không ảnh hưởng đơn cũ (đơn giữ tên và giá đã bán).
-- Lưu xong, máy này tải lại menu ngay. Máy khác thấy menu mới ở lần tải lại sau; giỏ hàng luôn kiểm tra giá
-  mới trước khi thanh toán.
+- Lưu xong, máy này tải lại menu ngay. Máy khác nhận `menu:updated` qua WebSocket và tải lại trong vài giây
+  (giỏ hàng đang mở cũng kiểm tra lại giá). Sửa cửa hàng thì có `stores:updated`.
+- **Thống kê** và **Cửa hàng** nằm trong tab Tài khoản (mục Quản lý). Doanh thu chỉ tính đơn đã thanh toán và
+  không bị huỷ, theo ngày đặt (giờ Việt Nam); màn thống kê tự cập nhật khi có `order:updated`.
 
 ### Kiểm tra code
 
@@ -299,7 +308,7 @@ Dự án NestJS. Chi tiết cách chạy và cổng: [../backend/README.md](../b
 ```
 backend/
 ├── src/
-│   ├── auth/ users/ stores/ menu/ orders/ payments/ chat/   # Mỗi tính năng một module
+│   ├── auth/ users/ stores/ menu/ orders/ payments/ chat/ stats/   # Mỗi tính năng một module
 │   │   ├── entities/    # Entity TypeORM (bảng)
 │   │   ├── dto/         # Dữ liệu vào, có validate
 │   │   ├── *.module.ts
@@ -316,6 +325,7 @@ backend/
 │   └── main.ts
 ├── test/                # Test e2e
 ├── uploads/             # File người dùng upload (không commit)
+├── seed-images/products/ # Ảnh thật cho món mẫu, tên file = slug của món (ca-phe-sua-da.jpg); seed copy vào uploads/
 ├── docker-compose.yml   # PostgreSQL
 ├── .env.example         # Mẫu biến môi trường (commit)
 └── .env                 # Giá trị thật, secret (không commit)

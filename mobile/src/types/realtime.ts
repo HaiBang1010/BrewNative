@@ -61,6 +61,9 @@ export type OrderUpdatedEvent = {
   changedAt: string;
 };
 
+/** menu:updated and stores:updated, sent to everyone. Only says "refetch". */
+export type CatalogUpdatedEvent = { changedAt: string };
+
 export type MessageNewEvent = {
   conversationId: string;
   customerId: string;

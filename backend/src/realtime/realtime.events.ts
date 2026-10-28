@@ -15,6 +15,10 @@ export const ServerEvent = {
   OrderUpdated: 'order:updated',
   MessageNew: 'message:new',
   ConversationRead: 'conversation:read',
+  /** To everyone: categories, products or options changed. Refetch the menu. */
+  MenuUpdated: 'menu:updated',
+  /** To everyone: a store was added or changed (name, hours, open/closed). Refetch the stores. */
+  StoresUpdated: 'stores:updated',
   /** Sent right before the server disconnects a socket whose access token expired. */
   SessionExpired: 'session:expired',
 } as const;
@@ -24,6 +28,9 @@ export const ClientEvent = {
   MessageSend: 'message:send',
   ConversationRead: 'conversation:read',
 } as const;
+
+/** Payload of menu:updated and stores:updated. They only say "refetch": the data comes from REST. */
+export type CatalogUpdatedEvent = { changedAt: string };
 
 export type OrderUpdatedEvent = {
   orderId: string;

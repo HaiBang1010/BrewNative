@@ -1,3 +1,5 @@
+import { copyFileSync, existsSync, mkdirSync, readdirSync } from 'node:fs';
+import { extname, join } from 'node:path';
 import { hashPassword } from '../common/utils/password.js';
 import { slugify } from '../common/utils/slugify.js';
 import { Category } from '../menu/entities/category.entity.js';
@@ -5,6 +7,7 @@ import { OptionGroup } from '../menu/entities/option-group.entity.js';
 import { Option } from '../menu/entities/option.entity.js';
 import { Product } from '../menu/entities/product.entity.js';
 import { Store } from '../stores/entities/store.entity.js';
+import { UPLOADS_DIR } from '../uploads/image-upload.js';
 import { UserRole } from '../users/entities/user-role.enum.js';
 import { User } from '../users/entities/user.entity.js';
 import dataSource from './data-source.js';
@@ -284,12 +287,49 @@ async function seedMenu() {
   });
 }
 
+/**
+ * Real photos for the sample products: seed-images/products/<product slug>.jpg
+ * (e.g. ca-phe-sua-da.jpg for "Cà phê sữa đá"). Copied to uploads/ and served by the
+ * backend like an admin upload. Only replaces placeholder images, never one an admin
+ * uploaded, so it is safe to run again (also on an existing database).
+ */
+async function seedProductImages() {
+  const dir = join(process.cwd(), 'seed-images', 'products');
+  if (!existsSync(dir)) return;
+  const publicUrl = (process.env.PUBLIC_URL ?? 'http://localhost:3100').replace(
+    /\/$/,
+    '',
+  );
+  const target = join(UPLOADS_DIR, 'products');
+  mkdirSync(target, { recursive: true });
+
+  const products = dataSource.getRepository(Product);
+  const bySlug = new Map(
+    (await products.find()).map((p) => [slugify(p.name), p]),
+  );
+  let count = 0;
+  for (const file of readdirSync(dir)) {
+    const product = bySlug.get(file.slice(0, -extname(file).length));
+    if (!product || !isPlaceholder(product.imageUrl)) continue;
+    const name = `seed-${file}`;
+    copyFileSync(join(dir, file), join(target, name));
+    product.imageUrl = `${publicUrl}/uploads/products/${name}`;
+    await products.save(product);
+    count++;
+  }
+  console.log(`  ${count} product photos`);
+}
+
+const isPlaceholder = (url: string | null) =>
+  !url || url.startsWith('https://picsum.photos/');
+
 await dataSource.initialize();
 try {
   console.log('Seeding...');
   await seedUsers();
   await seedStores();
   await seedMenu();
+  await seedProductImages();
   console.log('Done.');
 } finally {
   await dataSource.destroy();

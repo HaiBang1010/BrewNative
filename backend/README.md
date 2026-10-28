@@ -80,7 +80,7 @@ Tài khoản Stripe test hiện tại ở Singapore và nhận VND; số tiền 
 | `npm run migration:generate -- src/database/migrations/<TenMigration>` | Sinh migration từ thay đổi entity |
 | `npm run migration:revert` | Hoàn tác migration gần nhất |
 | `npm run migration:show` | Xem migration nào đã chạy |
-| `npm run seed` | Thêm dữ liệu mẫu (chạy lại không bị trùng) |
+| `npm run seed` | Thêm dữ liệu mẫu (chạy lại không bị trùng). Món còn ảnh tạm thì lấy ảnh thật trong `seed-images/products/` |
 | `npm test` | Unit test (Vitest) |
 | `npm run db:test:prepare` | Tạo database `brew_test` riêng cho test và chạy migration (làm lần đầu, và sau mỗi migration mới) |
 | `npm run test:e2e` | Test e2e trên database `brew_test`, gồm WebSocket và Stripe (phần Stripe cần key test và mạng, tự bỏ qua nếu thiếu key). Chạy được cả khi server dev và `stripe:listen` đang bật |

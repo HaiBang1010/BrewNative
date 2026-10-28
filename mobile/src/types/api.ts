@@ -100,6 +100,11 @@ export type OptionInput = {
   sortOrder?: number;
 };
 
+export type Weekday = 'mon' | 'tue' | 'wed' | 'thu' | 'fri' | 'sat' | 'sun';
+/** Times are "HH:mm". null = closed that day. */
+export type DayHours = { open: string; close: string } | null;
+export type OpeningHours = Partial<Record<Weekday, DayHours>>;
+
 export type Store = {
   id: string;
   name: string;
@@ -108,7 +113,36 @@ export type Store = {
   longitude: number;
   phone: string | null;
   imageUrl: string | null;
+  openingHours: OpeningHours | null;
+  /** false = temporarily closed: hidden from customers (GET /stores). */
   isActive: boolean;
+};
+
+/** Body of POST /admin/stores; PATCH takes any subset. */
+export type StoreInput = {
+  name: string;
+  address: string;
+  latitude: number;
+  longitude: number;
+  phone: string | null;
+  openingHours: OpeningHours;
+  isActive: boolean;
+};
+
+/** GET /admin/stats/sales: money in VND, days in Vietnam time ("YYYY-MM-DD"). */
+export type SalesStats = {
+  from: string;
+  to: string;
+  revenue: number;
+  orders: number;
+  averageOrder: number;
+  itemsSold: number;
+  /** Paid orders the shop cancelled (refunded). */
+  cancelledOrders: number;
+  byDay: { date: string; revenue: number; orders: number }[];
+  /** productId is null for a product deleted since. */
+  topProducts: { productId: string | null; name: string; quantity: number; revenue: number }[];
+  byStore: { storeId: string; name: string; revenue: number; orders: number }[];
 };
 
 export type OrderStatus =

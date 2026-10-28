@@ -4,6 +4,21 @@ export function formatVnd(amount: number): string {
   return `${amount.toLocaleString('vi-VN')}₫`;
 }
 
+/** Short amounts for chart labels: 950.000₫ → "950k", 1.250.000₫ → "1,3tr". */
+export function formatVndShort(amount: number): string {
+  if (amount >= 1_000_000) {
+    return `${(amount / 1_000_000).toLocaleString('vi-VN', { maximumFractionDigits: 1 })}tr`;
+  }
+  if (amount >= 1_000) return `${Math.round(amount / 1_000)}k`;
+  return String(amount);
+}
+
+/** "2026-10-28" (a shop day) → "28/10". */
+export function formatShortDate(day: string): string {
+  const [, month, date] = day.split('-');
+  return `${date}/${month}`;
+}
+
 export function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('vi-VN', {
     hour: '2-digit',

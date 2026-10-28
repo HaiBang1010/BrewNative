@@ -17,6 +17,7 @@ import { OrdersModule } from './orders/orders.module.js';
 import { PaymentsModule } from './payments/payments.module.js';
 import { PushModule } from './push/push.module.js';
 import { RealtimeModule } from './realtime/realtime.module.js';
+import { StatsModule } from './stats/stats.module.js';
 import { StoresModule } from './stores/stores.module.js';
 import { UsersModule } from './users/users.module.js';
 
@@ -52,6 +53,7 @@ import { UsersModule } from './users/users.module.js';
     OrdersModule,
     PaymentsModule,
     ChatModule,
+    StatsModule,
   ],
   providers: [
     // Order matters: rate limit, then authenticate, then check roles.

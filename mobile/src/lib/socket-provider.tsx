@@ -4,6 +4,7 @@ import { AppState } from 'react-native';
 import { api } from '@/services/session';
 import { socket } from '@/services/socket';
 import type { MessageNewEvent, OrderUpdatedEvent } from '@/types/realtime';
+import { refreshMenuQueries, refreshStoreQueries } from './catalog-cache';
 import { upsertMessage, type ChatPages } from '@/utils/chat-cache';
 import { useAuth } from './auth-provider';
 import { queryKeys } from './query-keys';
@@ -51,6 +52,9 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       void queryClient.invalidateQueries({ queryKey: ['order'] });
       void queryClient.invalidateQueries({ queryKey: ['chat'] });
       void queryClient.invalidateQueries({ queryKey: ['admin'] });
+      // menu:updated / stores:updated sent while offline are lost too.
+      refreshMenuQueries(queryClient);
+      refreshStoreQueries(queryClient);
     };
     const onDisconnect = () => setIsConnected(false);
     // The server disconnects when the access token expires. Socket.IO does not
@@ -88,6 +92,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       // Staff devices are in the "staff" room and receive every order's updates.
       void queryClient.invalidateQueries({ queryKey: queryKeys.staffOrder(event.orderId) });
       void queryClient.invalidateQueries({ queryKey: queryKeys.staffOrders });
+      // A paid, cancelled or completed order changes the sales figures.
+      void queryClient.invalidateQueries({ queryKey: ['admin', 'stats'] });
     };
     const onMessageNew = (event: MessageNewEvent) => {
       queryClient.setQueryData<ChatPages>(queryKeys.chatMessages, (data) =>
@@ -104,13 +110,22 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       void queryClient.invalidateQueries({ queryKey: queryKeys.staffConversations });
     };
 
+    // An admin changed the menu or a store (maybe on this device): refetch what is cached.
+    // Prices in the cart are checked again too, since the cart screen reads the products.
+    const onMenuUpdated = () => refreshMenuQueries(queryClient);
+    const onStoresUpdated = () => refreshStoreQueries(queryClient);
+
     socket.on('order:updated', onOrderUpdated);
     socket.on('message:new', onMessageNew);
     socket.on('conversation:read', onConversationRead);
+    socket.on('menu:updated', onMenuUpdated);
+    socket.on('stores:updated', onStoresUpdated);
     return () => {
       socket.off('order:updated', onOrderUpdated);
       socket.off('message:new', onMessageNew);
       socket.off('conversation:read', onConversationRead);
+      socket.off('menu:updated', onMenuUpdated);
+      socket.off('stores:updated', onStoresUpdated);
     };
   }, [queryClient]);
 

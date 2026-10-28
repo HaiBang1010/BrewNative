@@ -488,6 +488,8 @@ const socket = io('http://192.168.0.13:3100', {
 | `message:new` | khách của cuộc chat + `staff` | Mỗi tin nhắn mới, gửi qua WebSocket hay REST đều có | `{ conversationId, customerId, message }` |
 | `conversation:read` | khách của cuộc chat + `staff` | Khách hoặc nhân viên đánh dấu đã đọc, hoặc nhân viên trả lời | `{ conversationId, customerId, reader: 'customer' \| 'staff', readAt }` |
 | `session:expired` | socket đó | Access token hết hạn, ngay trước khi ngắt kết nối | không có |
+| `menu:updated` | mọi socket | Admin thêm/sửa/xoá danh mục, món, tuỳ chọn, ảnh món. Gộp các thay đổi trong 0,5 giây thành 1 event | `{ changedAt }` |
+| `stores:updated` | mọi socket | Admin thêm hoặc sửa cửa hàng (giờ mở cửa, tạm đóng...) | `{ changedAt }` |
 
 `message` có dạng `{ id, clientId, conversationId, senderId, sender: { id, fullName, avatarUrl, role }, body, createdAt }`,
 giống hệt REST. `sender` không bao giờ chứa email hay số điện thoại. Mọi thời gian là chuỗi ISO 8601.
@@ -543,6 +545,7 @@ Danh sách đầy đủ, kèm schema và nút "Try it out": **http://localhost:3
 | Admin: chat | `GET /api/admin/conversations`, `GET` `POST /api/admin/conversations/:id/messages`, `POST /api/admin/conversations/:id/read` | staff, admin |
 | Admin: menu | `/api/admin/categories`, `/api/admin/products` (+ `/:id/image`, `/:id/option-groups`), `/api/admin/option-groups/:id` (+ `/options`), `/api/admin/options/:id` | admin |
 | Admin: cửa hàng | `GET` `POST /api/admin/stores`, `PATCH /api/admin/stores/:id` | admin |
+| Admin: thống kê | `GET /api/admin/stats/sales?days=7` (1–90 ngày, tính tới hôm nay, giờ Việt Nam) | admin |
 | Admin: user | `GET /api/admin/users`, `GET /api/admin/users/:id`, `PATCH /api/admin/users/:id/role` | admin |
 | Thanh toán | `POST /api/orders/:id/payment` (trả về tham số cho PaymentSheet), `POST /api/orders/:id/payment/confirm` (hỏi Stripe, cập nhật đơn) | chủ đơn |
 | Stripe | `POST /api/webhooks/stripe` (Stripe gọi, xác minh bằng header `Stripe-Signature`) | Stripe |
