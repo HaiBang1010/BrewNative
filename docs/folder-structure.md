@@ -181,13 +181,26 @@ cold start, không qua bước này.
 - Bấm thông báo → mở màn đơn hoặc chat (`utils/notification-route.ts`).
 - Đăng xuất → gửi token kèm `/auth/logout` để máy này không nhận thông báo của tài khoản cũ nữa.
 
-Cần làm một lần để push chạy được:
-1. `cd mobile && npx eas-cli init`: tạo project trên Expo, ghi `extra.eas.projectId` vào `app.json`
-   (Expo cấp push token theo project). Chưa có thì app bỏ qua bước đăng ký và cảnh báo trong console.
-2. Credentials: iOS cần APNs key (tài khoản Apple Developer trả phí), Android cần FCM V1
-   (`google-services.json` + service account key). Upload bằng `npx eas-cli credentials`.
-3. Build lại app (`npx expo prebuild --clean` rồi `npm run ios` / `npm run android`): expo-notifications là code native.
-4. Thử trên máy thật, simulator iOS (Xcode 14+) hoặc emulator Android có Google Play.
+Cài đặt push (đã làm cho Android; iOS chưa):
+1. **Expo project:** `npx eas-cli init` đã ghi `extra.eas.projectId` (+ `owner`) vào `app.json`. Expo cấp push token
+   theo project; thiếu projectId thì app bỏ qua bước đăng ký và cảnh báo trong console.
+2. **Android (FCM V1):** Firebase project `brew-d9c3e`, app `com.brew.reactnative`.
+   - `mobile/google-services.json` (commit được, chỉ chứa mã định danh) khai báo ở `android.googleServicesFile`.
+   - Khoá service account (`*-firebase-adminsdk-*.json`) là **bí mật**: không để trong repo (`.gitignore` đã chặn),
+     chỉ upload lên Expo bằng `npx eas-cli credentials -p android` → Google Service Account → FCM V1.
+     Đổi khoá thì upload lại.
+3. **iOS (APNs):** cần tài khoản Apple Developer trả phí: `npx eas-cli credentials -p ios` → Push Notifications.
+   Chưa có thì thử bằng `xcrun simctl push` (thông báo giả trên simulator).
+4. Build lại app sau khi đổi các file trên (`npx expo prebuild --clean`, rồi `npm run android` / `npm run ios`).
+
+Thử nhanh: đăng nhập tài khoản quán trên máy Android (được hỏi quyền ngay), cho app xuống nền, rồi tạo một đơn và
+`POST /api/dev/orders/:id/mark-paid` (chỉ có khi không phải production): máy quán nhận "Đơn mới", bấm vào mở đúng đơn.
+`eas.json` có sẵn các profile `development` / `preview` / `production` cho EAS Build sau này.
+- Backend gửi mọi push với `priority: 'high'`: để mặc định (normal) thì Android giữ tin FCM lại, có khi vài phút.
+- Emulator mở lại từ snapshot có thể mất kết nối FCM (`FirebaseMessaging ... AUTHENTICATION_FAILED` trong
+  `adb logcat`): push gửi thành công nhưng không tới máy. Khởi động lạnh: `emulator -avd Pixel_8 -no-snapshot-load`.
+- Bản dev: push tới đúng lúc app vừa mở và còn đang tải JS thì không hiện (chưa có ai trả lời
+  `setNotificationHandler`). Bản phát hành tải JS ngay nên gần như không gặp.
 
 **Realtime:** `lib/socket-provider.tsx` giữ WebSocket kết nối khi đã đăng nhập. Event `order:updated` làm màn đơn và
 danh sách đơn tự tải lại; `message:new` thêm tin vào màn chat; `conversation:read` cập nhật số tin chưa đọc. Token

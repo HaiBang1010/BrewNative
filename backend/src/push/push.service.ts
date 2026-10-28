@@ -76,6 +76,11 @@ export class PushService {
       title: payload.title,
       body: payload.body,
       data: payload.data,
+      // Every push here is time-sensitive (new order, order ready, a reply). With the
+      // default (normal) priority, Android may hold FCM messages for minutes.
+      priority: 'high',
+      // The channel the app creates (expo-notifications plugin in app.json, importance high).
+      channelId: 'default',
     }));
 
     const deadTokens: string[] = [];

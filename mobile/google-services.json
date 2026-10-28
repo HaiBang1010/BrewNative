@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "888390268526",
+    "project_id": "brew-d9c3e",
+    "storage_bucket": "brew-d9c3e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:888390268526:android:77539eb030c74a2135587f",
+        "android_client_info": {
+          "package_name": "com.brew.reactnative"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCixI5-WeF_KbUEhYMQP82f5wvgI0T39UE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

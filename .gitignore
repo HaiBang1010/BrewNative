@@ -45,3 +45,6 @@ mobile/android
 
 # backend uploaded files
 backend/uploads/
+
+# Firebase service account keys (FCM V1): secret, upload to EAS only. google-services.json is fine to commit.
+*-firebase-adminsdk-*.json

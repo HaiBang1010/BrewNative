@@ -19,6 +19,7 @@ const projectId: string | undefined =
 
 /** The last token obtained, so signing out can unregister this device. */
 let currentToken: string | null = null;
+let pendingToken: Promise<string | null> | null = null;
 
 // While the app is open, still show the banner: "Đơn đã sẵn sàng" is worth seeing
 // even on another screen. Must be set before any notification arrives.
@@ -71,18 +72,22 @@ export const notificationsService = {
    * This device's Expo push token, or null when push can't work here: no EAS
    * project id yet, or no network / no push service (some emulators).
    */
-  async getPushToken(): Promise<string | null> {
+  getPushToken(): Promise<string | null> {
     if (!projectId) {
       if (__DEV__) console.warn('Push: no EAS projectId in app.json, run `eas init` in mobile/.');
-      return null;
+      return Promise.resolve(null);
     }
-    try {
-      currentToken = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
-      return currentToken;
-    } catch (error) {
-      if (__DEV__) console.warn('Push: could not get a push token', error);
-      return null;
-    }
+    // Callers at the same moment (sign-in, a burst of token-change events) share one request.
+    pendingToken ??= Notifications.getExpoPushTokenAsync({ projectId })
+      .then(({ data }) => (currentToken = data))
+      .catch((error: unknown) => {
+        if (__DEV__) console.warn('Push: could not get a push token', error);
+        return null;
+      })
+      .finally(() => {
+        pendingToken = null;
+      });
+    return pendingToken;
   },
 
   currentToken: () => currentToken,
